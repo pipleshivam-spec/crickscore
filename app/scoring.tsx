@@ -85,6 +85,11 @@ export default function Scoring() {
   const emitterRef = React.useRef<CelebrationEmitterHandle>(null);
   const shakeX = useSharedValue(0);
 
+  const animatedShakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
+
+
   const triggerShake = () => {
     shakeX.value = withSequence(
       withTiming(-10, { duration: 50 }),
@@ -369,7 +374,11 @@ export default function Scoring() {
   };
 
   const processBall = async (result: string, direction: string = 'none') => {
+    if (!score.striker || !score.nonStriker) { setModals(m => ({ ...m, setup: true })); return; }
+    if (!score.bowler) { setModals(m => ({ ...m, bowler: true })); return; }
+
     // ─── Professional Delivery Classification ───
+
     const c = classifyDelivery(result);
     const isWicket = result === 'W';
 
@@ -990,10 +999,6 @@ export default function Scoring() {
 
   if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={theme.colors.accent} /></View>;
 
-  const animatedShakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
-
   return (
     <Animated.View style={[styles.container, animatedShakeStyle]}>
       <StatusBar style="light" />
@@ -1051,7 +1056,11 @@ export default function Scoring() {
           {/* DELIVERY CONTROL IMMEDIATELY AFTER BATSMEN */}
           <BallButtons 
             onBall={handleBall} 
-            onWicket={() => setModals(m => ({ ...m, wicket: true }))} 
+            onWicket={() => {
+              if (!score.striker || !score.nonStriker) { setModals(m => ({ ...m, setup: true })); return; }
+              if (!score.bowler) { setModals(m => ({ ...m, bowler: true })); return; }
+              setModals(m => ({ ...m, wicket: true }));
+            }} 
             onExtra={(type) => handleBall(type)} 
             onUndo={handleUndo}
             onSwap={() => {
@@ -1150,9 +1159,11 @@ export default function Scoring() {
                     setVoiceCommand('');
                     setIsVoiceActive(false);
                     if (cmd === 'W') {
+                      if (!score.striker || !score.nonStriker) { setModals(m => ({ ...m, setup: true })); return; }
+                      if (!score.bowler) { setModals(m => ({ ...m, bowler: true })); return; }
                       setModals(m => ({ ...m, wicket: true }));
                     } else {
-                      processBall(cmd);
+                      handleBall(cmd);
                     }
                   }
                 }}

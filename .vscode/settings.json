@@ -1,0 +1,15 @@
+{
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+  "typescript.validate.enable": true,
+  "typescript.disableAutomaticTypeAcquisition": false,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.expo": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.expo/**": true
+  },
+  "typescript.tsconfig.tsBuildInfoFile": ".tsbuildinfo",
+  "typescript.preferences.includePackageJsonAutoImports": "auto"
+}

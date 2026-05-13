@@ -65,10 +65,7 @@ export default function CreateSession() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient 
-        colors={[theme.colors.gradientStart, theme.colors.background, '#000']} 
-        style={StyleSheet.absoluteFill} 
-      />
+      {/* Global ProfessionalBackground provides the depth here */}
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -117,7 +114,7 @@ export default function CreateSession() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1 },
   content: { flex: 1, padding: 32, justifyContent: 'space-between' },
   backBtn: {

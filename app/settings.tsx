@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { useAppTheme, THEME_PRESETS, ThemeId } from '../src/theme/ThemeContext';
 import { BottomNavBar } from '../src/components/BottomNavBar';
 import { localDb } from '../src/lib/localDb';
@@ -48,8 +49,13 @@ export default function SettingsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.title}>ELITE COMMAND</Text>
-            <Text style={styles.subtitle}>SYSTEM CONFIGURATION & PREFERENCES</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/')}>
+              <Text style={styles.backText}>←</Text>
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.title}>ELITE COMMAND</Text>
+              <Text style={styles.subtitle}>SYSTEM CONFIGURATION & PREFERENCES</Text>
+            </View>
           </View>
 
           {/* Theme Section */}
@@ -140,7 +146,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   safeArea: { flex: 1 },
   scroll: { paddingBottom: 120 },
-  header: { padding: 24 },
+  header: { padding: 24, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  backText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
   title: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
   subtitle: { fontSize: 9, fontWeight: '800', color: theme.colors.accent, letterSpacing: 2, marginTop: 4 },
   section: { paddingHorizontal: 24, marginTop: 32 },

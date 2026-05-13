@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 import { useAppTheme } from '../src/theme/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { localDb } from '../src/lib/localDb';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +22,26 @@ export default function MatchSetup() {
   const [matchType, setMatchType] = useState('T20');
   const [pitch, setPitch] = useState('HARD');
   const [ball, setBall] = useState('LEATHER');
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<any>(null);
+  const { tournamentId } = useLocalSearchParams<{ tournamentId: string }>();
+
+  useEffect(() => {
+    loadTournaments();
+  }, []);
+
+  const loadTournaments = async () => {
+    const data = await localDb.getTournaments();
+    setTournaments(data);
+    if (tournamentId) {
+      const tour = data.find((t: any) => t.id === tournamentId);
+      if (tour) {
+        setSelectedTournament(tour);
+        // If tournament is selected, maybe pre-fill some settings?
+        setOvers(tour.overs || 20);
+      }
+    }
+  };
 
   const progress = (step / 3) * 100;
 
@@ -32,26 +53,50 @@ export default function MatchSetup() {
 
     try {
       setLoading(true);
-      const { data: matchData, error: matchError } = await supabase
-        .from('matches')
-        .insert([{
-          session_id: sessionId,
-          team_a: team1Name,
-          team_b: team2Name,
-          overs: overs,
-        }])
-        .select()
-        .single();
+      const matchId = `match_${Date.now()}`;
+      const newMatch = {
+        id: matchId,
+        team_a: team1Name,
+        team_b: team2Name,
+        teamA: team1Name,
+        teamB: team2Name,
+        overs: overs,
+        matchType,
+        pitch,
+        ball,
+        tournament_id: selectedTournament?.id || null,
+        date: new Date().toISOString(),
+        status: 'live',
+        result: null,
+        created_at: new Date().toISOString(),
+        isLocal: true,
+      };
 
-      if (matchError) throw matchError;
+      await localDb.saveMatch(newMatch);
+
+      // If linked to a tournament, add this match to the tournament's match list
+      if (selectedTournament) {
+        const updatedTournament = {
+          ...selectedTournament,
+          matches: [...(selectedTournament.matches || []), {
+            id: matchId,
+            teamA: team1Name,
+            teamB: team2Name,
+            date: new Date().toISOString(),
+            status: 'live',
+            result: null,
+          }],
+        };
+        await localDb.saveTournament(updatedTournament);
+      }
 
       router.push({
         pathname: '/toss',
-        params: { matchId: matchData.id, team1Name, team2Name }
+        params: { matchId, team1Name, team2Name }
       });
 
     } catch (err: any) {
-      Alert.alert('SETUP FAILED', 'Elite cloud sync error. Please try again.');
+      Alert.alert('SETUP FAILED', 'Could not create match. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -62,53 +107,73 @@ export default function MatchSetup() {
       case 1:
         return (
           <View style={styles.stepContainer}>
+            <Text style={styles.sectionTitle}>TOURNAMENT LINKING</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tourSelector}>
+              <TouchableOpacity
+                style={[styles.tourChip, !selectedTournament && styles.tourChipActive]}
+                onPress={() => setSelectedTournament(null)}
+              >
+                <Text style={[styles.tourChipText, !selectedTournament && styles.tourChipTextActive]}>EXHIBITION MATCH</Text>
+              </TouchableOpacity>
+              {tournaments.map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[styles.tourChip, selectedTournament?.id === t.id && styles.tourChipActive]}
+                  onPress={() => {
+                    setSelectedTournament(t);
+                    setOvers(t.overs);
+                  }}
+                >
+                  <Text style={[styles.tourChipText, selectedTournament?.id === t.id && styles.tourChipTextActive]}>{t.name.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <Text style={styles.sectionTitle}>SQUAD INITIALIZATION</Text>
-            <View style={styles.eliteInputCard}>
-              <LinearGradient colors={['rgba(255,255,255,0.03)', 'transparent']} style={styles.cardGlow} />
-              <View style={styles.inputHeader}>
-                <View style={styles.labelGroup}>
-                  <Text style={styles.eliteLabel}>PRIMARY SQUAD</Text>
-                  <View style={styles.proBadge}><Text style={styles.proBadgeText}>HOME</Text></View>
-                </View>
-                <View style={styles.statusDot} />
-              </View>
-              <TextInput
-                style={styles.eliteInput}
-                value={team1Name}
-                onChangeText={setTeam1Name}
-                placeholder="ENTER TEAM NAME"
-                placeholderTextColor="rgba(255,255,255,0.1)"
-                selectionColor={theme.colors.accent}
-                autoCapitalize="characters"
-              />
-            </View>
 
-            <View style={styles.vsDividerRow}>
-              <View style={styles.vsLine} />
-              <View style={styles.vsCircleElite}>
-                <Text style={styles.vsTextElite}>VS</Text>
-              </View>
-              <View style={styles.vsLine} />
-            </View>
-
-            <View style={styles.eliteInputCard}>
-              <LinearGradient colors={['rgba(255,255,255,0.03)', 'transparent']} style={styles.cardGlow} />
-              <View style={styles.inputHeader}>
-                <View style={styles.labelGroup}>
-                  <Text style={styles.eliteLabel}>OPPOSING SQUAD</Text>
-                  <View style={[styles.proBadge, { backgroundColor: 'rgba(255,255,255,0.05)' }]}><Text style={styles.proBadgeText}>AWAY</Text></View>
+            <View style={styles.squadInputsCompact}>
+              {/* Team A */}
+              <View style={styles.slimInputCard}>
+                <View style={styles.inputLabelRow}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.slimLabel}>HOME SQUAD</Text>
                 </View>
-                <View style={[styles.statusDot, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+                <TextInput
+                  style={styles.slimInput}
+                  value={team1Name}
+                  onChangeText={setTeam1Name}
+                  placeholder="TEAM A"
+                  placeholderTextColor="rgba(255,255,255,0.1)"
+                  selectionColor={theme.colors.accent}
+                  autoCapitalize="characters"
+                />
               </View>
-              <TextInput
-                style={styles.eliteInput}
-                value={team2Name}
-                onChangeText={setTeam2Name}
-                placeholder="ENTER TEAM NAME"
-                placeholderTextColor="rgba(255,255,255,0.1)"
-                selectionColor={theme.colors.accent}
-                autoCapitalize="characters"
-              />
+
+              {/* VS Divider */}
+              <View style={styles.vsCompactRow}>
+                <View style={styles.vsLinePro} />
+                <View style={styles.vsChipPro}>
+                  <Text style={styles.vsTextPro}>VS</Text>
+                </View>
+                <View style={styles.vsLinePro} />
+              </View>
+
+              {/* Team B */}
+              <View style={styles.slimInputCard}>
+                <View style={styles.inputLabelRow}>
+                  <View style={[styles.statusDot, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+                  <Text style={styles.slimLabel}>AWAY SQUAD</Text>
+                </View>
+                <TextInput
+                  style={styles.slimInput}
+                  value={team2Name}
+                  onChangeText={setTeam2Name}
+                  placeholder="TEAM B"
+                  placeholderTextColor="rgba(255,255,255,0.1)"
+                  selectionColor={theme.colors.accent}
+                  autoCapitalize="characters"
+                />
+              </View>
             </View>
           </View>
         );
@@ -183,7 +248,7 @@ export default function MatchSetup() {
           <View style={styles.stepContainer}>
             <Text style={styles.sectionTitle}>MATCH TICKET VERIFICATION</Text>
             <View style={styles.ticketCard}>
-              <LinearGradient colors={['#0f172a', '#020617']} style={styles.ticketInner}>
+              <View style={[styles.ticketInner, { backgroundColor: '#0f172a' }]}>
                 <View style={styles.ticketHeader}>
                   <View>
                     <Text style={styles.ticketBranding}>LAZYCRIC PRO</Text>
@@ -233,7 +298,7 @@ export default function MatchSetup() {
                     <Text style={styles.footerVal}>{ball.charAt(0)}</Text>
                   </View>
                 </View>
-              </LinearGradient>
+              </View>
             </View>
             <View style={styles.hintBox}>
               <Text style={styles.hintText}>* All parameters are synced to the cloud for real-time viewer access.</Text>
@@ -247,10 +312,7 @@ export default function MatchSetup() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[theme.colors.gradientStart, theme.colors.background, '#000']}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Global ProfessionalBackground provides the depth here */}
 
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -266,19 +328,28 @@ export default function MatchSetup() {
                 <View style={[styles.progressFill, { width: `${progress}%` }]} />
               </View>
               <Text style={styles.stepCounter}>
-                STEP 0{step} <Text style={{ color: theme.colors.textMuted }}>/ 03</Text>
+                STEP 0{step} <Text style={{ color: 'rgba(255,255,255,0.2)' }}>/ 03</Text>
               </Text>
             </View>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-            <View style={styles.titleSection}>
-              <Text style={styles.mainTitle}>MATCH SETUP</Text>
-              <Text style={styles.mainSub}>ELITE CONFIGURATION PANEL</Text>
-            </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scroll}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.titleSection}>
+                <Text style={styles.mainTitle}>MATCH SETUP</Text>
+                <Text style={styles.mainSub}>ELITE CONFIGURATION PANEL</Text>
+              </View>
 
-            {renderStep()}
-          </ScrollView>
+              {renderStep()}
+            </ScrollView>
+          </KeyboardAvoidingView>
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -287,21 +358,18 @@ export default function MatchSetup() {
               disabled={loading}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={[theme.colors.accent, theme.colors.accentSecondary]}
-                style={styles.btnInner}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+              <View
+                style={[styles.btnInner, { backgroundColor: theme.colors.accent }]}
               >
                 {loading ? (
-                  <ActivityIndicator color={theme.colors.background} />
+                  <ActivityIndicator color="#000" />
                 ) : (
                   <>
                     <Text style={styles.btnText}>{step === 3 ? 'INITIALIZE ENGINE' : 'CONTINUE'}</Text>
                     <Text style={styles.btnIcon}>→</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -311,202 +379,117 @@ export default function MatchSetup() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1 },
-  content: { flex: 1, padding: 32 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 48,
-  },
-  backBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  backIcon: { color: '#FFF', fontSize: 18, fontWeight: '700' },
-  progressWrapper: { alignItems: 'flex-end', flex: 1, marginLeft: 40 },
-  progressBar: {
-    width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.accent,
-  },
-  stepCounter: {
-    fontSize: 9,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
-    letterSpacing: 3,
-    marginTop: 16,
-    textTransform: 'uppercase'
-  },
+  content: { flex: 1 },
+  header: { padding: 24, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  backIcon: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  progressWrapper: { flex: 1, marginLeft: 20 },
+  progressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
+  progressFill: { height: '100%', backgroundColor: theme.colors.accent },
+  stepCounter: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2, textTransform: 'uppercase' },
   scroll: { flexGrow: 1, paddingBottom: 60 },
-  titleSection: { marginBottom: 56 },
-  mainTitle: {
-    fontSize: theme.typography.size.mega - 4,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
-    letterSpacing: theme.typography.letterSpacing.tight
-  },
-  mainSub: {
-    fontSize: theme.typography.size.xs - 1,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: theme.colors.accent,
-    letterSpacing: theme.typography.letterSpacing.extraWide + 2,
-    marginTop: 12,
-    textTransform: 'uppercase'
-  },
-  stepContainer: { flex: 1 },
-  sectionTitle: {
-    fontSize: 9,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.2)',
-    letterSpacing: 4,
-    marginBottom: 40,
-    textTransform: 'uppercase'
-  },
-  teamInputWrapper: { gap: 24 },
-  eliteInputCard: {
+  titleSection: { paddingHorizontal: 24, marginBottom: 20 },
+  mainTitle: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: -0.5 },
+  mainSub: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
+
+  stepContainer: { paddingHorizontal: 24, gap: 16 },
+  sectionTitle: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 3, marginBottom: 4, textTransform: 'uppercase' },
+
+  tourSelector: { flexDirection: 'row', marginBottom: 12 },
+  tourChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  tourChipActive: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: theme.colors.accent },
+  tourChipText: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
+  tourChipTextActive: { color: theme.colors.accent },
+
+  squadInputsCompact: { gap: 8 },
+  slimInputCard: {
     backgroundColor: 'rgba(255,255,255,0.01)',
-    borderRadius: 40,
-    padding: 32,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    overflow: 'hidden'
+    borderColor: 'rgba(255,255,255,0.04)',
   },
-  cardGlow: { ...StyleSheet.absoluteFillObject, opacity: 0.1 },
-  inputHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.accent },
-  eliteLabel: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 2.5, textTransform: 'uppercase' },
-  eliteInput: {
-    fontSize: theme.typography.size.xxl - 4,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
-    letterSpacing: theme.typography.letterSpacing.tight
-  },
-  vsDividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: -12, zIndex: 10 },
-  vsLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
-  vsCircleElite: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#000', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginHorizontal: 20 },
-  vsTextElite: { color: theme.colors.accent, fontSize: 13, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
+  inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  slimLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5 },
+  slimInput: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
+  vsCompactRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
+  vsLinePro: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.03)' },
+  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginHorizontal: 16 },
+  vsTextPro: { fontSize: 10, fontWeight: '900', color: theme.colors.accent, letterSpacing: 1.5 },
 
-  labelGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  proBadge: { backgroundColor: 'rgba(251, 113, 133, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(251, 113, 133, 0.2)' },
-  proBadgeText: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 1 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent },
+  eliteOptionGroup: { marginBottom: 24 },
+  groupLabelElite: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2.5, marginBottom: 12, textTransform: 'uppercase' },
+  eliteGrid: { flexDirection: 'row', gap: 10 },
+  eliteChip: { flex: 1, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' },
+  eliteChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  eliteChipText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
+  eliteChipTextActive: { color: '#000' },
+  activeIndicator: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: '#000' },
 
-  eliteOptionGroup: { marginBottom: 48 },
-  groupLabelElite: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', letterSpacing: 3, marginBottom: 24, textTransform: 'uppercase' },
-  eliteGrid: { flexDirection: 'row', gap: 12 },
-  eliteChip: {
-    flex: 1,
-    height: 64,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  eliteChipActive: {
-    borderColor: theme.colors.accent,
-    backgroundColor: 'rgba(255, 126, 95, 0.03)',
-  },
-  eliteChipText: { fontSize: 12, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5 },
-  eliteChipTextActive: { color: theme.colors.accent },
-  activeIndicator: { position: 'absolute', bottom: 12, width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.accent },
+  oversGridElite: { flexDirection: 'row', gap: 10 },
+  overBoxElite: { flex: 1, height: 64, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' },
+  overBoxActive: { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: theme.colors.accent, borderWidth: 2 },
+  overValElite: { fontSize: 18, fontWeight: '900', color: '#FFF' },
+  overValActive: { color: theme.colors.accent },
+  overSubElite: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.15)', letterSpacing: 1 },
+  overSubActive: { color: theme.colors.accent },
 
-  oversGridElite: { flexDirection: 'row', gap: 12 },
-  overBoxElite: {
-    flex: 1,
-    height: 100,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.01)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  overBoxActive: {
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.03)',
-  },
-  overValElite: { fontSize: 32, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', letterSpacing: -1 },
-  overValActive: { color: '#FFF' },
-  overSubElite: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginTop: 4, letterSpacing: 2 },
-  overSubActive: { color: '#10B981' },
-
-  conditionRow: { flexDirection: 'row', gap: 16 },
-  conditionItem: { flex: 1, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  conditionLabel: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', letterSpacing: 2, marginBottom: 12 },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  conditionRow: { flexDirection: 'row', gap: 12 },
+  conditionItem: { flex: 1, backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: 20, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
+  conditionLabel: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', letterSpacing: 1.5, marginBottom: 10 },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   pillActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  pillText: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)' },
+  pillText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.25)' },
   pillTextActive: { color: '#000' },
 
-  ticketCard: { borderRadius: 48, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#000' },
-  ticketInner: { padding: 40 },
-  ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 },
-  ticketBranding: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 4 },
-  ticketMatchId: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', marginTop: 4 },
-  broadcastBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  broadcastDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#10B981' },
-  broadcastText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: '#10B981', letterSpacing: 1 },
-  ticketMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 },
+  ticketCard: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.01)' },
+  ticketInner: { padding: 32 },
+  ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
+  ticketBranding: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 3 },
+  ticketMatchId: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.1)', marginTop: 4 },
+  broadcastBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  broadcastDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#10B981' },
+  broadcastText: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: '#10B981', letterSpacing: 0.5 },
+  ticketMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
   ticketTeamBox: { flex: 1 },
-  ticketTeamName: {
-    fontSize: theme.typography.size.xl,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
-    letterSpacing: theme.typography.letterSpacing.tight
-  },
-  ticketTeamRole: {
-    fontSize: theme.typography.size.xs - 2,
-    fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.2)',
-    marginTop: 4,
-    letterSpacing: 1,
-    textTransform: 'uppercase'
-  },
-  ticketVSBox: { width: 60, alignItems: 'center' },
-  ticketVSText: { fontSize: 12, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.1)' },
-  ticketDividerRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -40, marginBottom: 40 },
-  ticketCut: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#000', marginLeft: -15 },
-  ticketCutRight: { marginLeft: 0, marginRight: -15 },
-  ticketDash: { flex: 1, height: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
+  ticketTeamName: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.5 },
+  ticketTeamRole: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginTop: 2, letterSpacing: 1, textTransform: 'uppercase' },
+  ticketVSBox: { width: 40, alignItems: 'center' },
+  ticketVSText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.03)' },
+  ticketDividerRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -32, marginBottom: 32 },
+  ticketCut: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#020617', marginLeft: -10 },
+  ticketCutRight: { marginLeft: 0, marginRight: -10 },
+  ticketDash: { flex: 1, height: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', borderStyle: 'dashed' },
   ticketFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   footerItem: { alignItems: 'center' },
-  footerLab: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', marginBottom: 6, letterSpacing: 1 },
-  footerVal: { fontSize: 13, fontFamily: theme.typography.fontFamily.bold, color: '#FFF' },
+  footerLab: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginBottom: 4, letterSpacing: 1 },
+  footerVal: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: '#FFF' },
 
-  hintBox: { marginTop: 40, paddingHorizontal: 24 },
-  hintText: { fontSize: 11, color: 'rgba(255,255,255,0.15)', lineHeight: 20, fontFamily: theme.typography.fontFamily.medium, textAlign: 'center', letterSpacing: 0.5 },
-  footer: { paddingTop: 32 },
-  primaryBtn: { height: 80, borderRadius: 32, overflow: 'hidden' },
-  btnInner: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  btnText: {
-    color: '#000',
-    fontSize: theme.typography.size.lg,
-    fontFamily: theme.typography.fontFamily.bold,
-    letterSpacing: 2,
-    textTransform: 'uppercase'
-  },
-  btnIcon: { color: '#000', fontSize: theme.typography.size.xl, fontFamily: theme.typography.fontFamily.bold },
+  footer: { padding: 24 },
+  primaryBtn: { height: 72, borderRadius: 24, overflow: 'hidden' },
+  btnInner: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
+  btnText: { color: '#000', fontSize: 16, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 1, textTransform: 'uppercase' },
+  btnIcon: { color: '#000', fontSize: 18, fontFamily: theme.typography.fontFamily.bold },
   disabledBtn: { opacity: 0.5 },
+
+  hintBox: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)',
+  },
+  hintText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 0.5,
+    lineHeight: 14,
+  },
 });

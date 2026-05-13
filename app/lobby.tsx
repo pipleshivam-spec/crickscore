@@ -3,12 +3,13 @@ import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Share, Dim
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
-import { theme } from '../src/theme';
+import { useAppTheme } from '../src/theme/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function Lobby() {
+  const { theme } = useAppTheme();
   const { sessionId, code, role } = useLocalSearchParams<{ sessionId: string, code: string, role: string }>();
   const [loading, setLoading] = useState(false);
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -58,9 +59,9 @@ export default function Lobby() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient 
-        colors={[theme.colors.gradientStart, theme.colors.background, '#000']} 
+        colors={[theme.colors.gradientStart, theme.colors.background, theme.colors.background]} 
         style={StyleSheet.absoluteFill} 
       />
       
@@ -114,11 +115,11 @@ export default function Lobby() {
                   end={{ x: 1, y: 1 }}
                 >
                   {loading ? (
-                    <ActivityIndicator color={theme.colors.background} />
+                    <ActivityIndicator color="#FFF" />
                   ) : (
                     <>
-                      <Text style={styles.btnText}>INITIALIZE SETUP</Text>
-                      <Text style={styles.btnIcon}>→</Text>
+                      <Text style={[styles.btnText, { color: '#FFF' }]}>INITIALIZE SETUP</Text>
+                      <Text style={[styles.btnIcon, { color: '#FFF' }]}>→</Text>
                     </>
                   )}
                 </LinearGradient>
@@ -129,7 +130,7 @@ export default function Lobby() {
                 <Text style={styles.waitingLabel}>Waiting for host to initialize...</Text>
               </View>
             )}
-            <Text style={styles.versionText}>LAZYCRIC SECURE PROTOCOL v2.0</Text>
+            <Text style={[styles.versionText, { color: theme.colors.textMuted, opacity: 0.3 }]}>LAZYCRIC SECURE PROTOCOL v2.0</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -138,7 +139,7 @@ export default function Lobby() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1 },
   safeArea: { flex: 1 },
   content: { flex: 1, padding: 32, justifyContent: 'space-between' },
   header: { 
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  backIcon: { color: theme.colors.text, fontSize: 18 },
+  backIcon: { color: '#FFF', fontSize: 18 },
   statusBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,13 +172,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.success,
+    backgroundColor: '#10B981',
     marginRight: 8,
   },
-  statusText: { color: theme.colors.success, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  statusText: { color: '#10B981', fontSize: 8, fontWeight: '900', letterSpacing: 1 },
   heroSection: { alignItems: 'center', marginTop: 40 },
-  heroTitle: { fontSize: 32, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
-  heroSub: { fontSize: 10, color: theme.colors.accent, fontWeight: '800', letterSpacing: 2, marginTop: 4 },
+  heroTitle: { fontSize: 32, fontWeight: '900', color: '#FFF', letterSpacing: -1 },
+  heroSub: { fontSize: 10, color: '#E2E8F0', fontWeight: '800', letterSpacing: 2, marginTop: 4 },
   centerCard: { width: '100%' },
   cardInner: { 
     borderRadius: 32, 
@@ -185,8 +186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     borderWidth: 1, 
     borderColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.02)'
   },
-  cardLabel: { fontSize: 9, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2, marginBottom: 24 },
+  cardLabel: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 2, marginBottom: 24 },
   codeWrapper: { flexDirection: 'row', gap: 6, marginBottom: 32 },
   charBox: {
     width: (width - 120) / 6,
@@ -198,12 +200,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  charText: { fontSize: 24, fontWeight: '900', color: theme.colors.accent },
+  charText: { fontSize: 24, fontWeight: '900', color: '#E2E8F0' },
   inviteBtn: { width: '100%', borderRadius: 20, overflow: 'hidden' },
   inviteInner: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  inviteText: { fontSize: 12, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
+  inviteText: { fontSize: 12, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
   footer: { width: '100%', alignItems: 'center', gap: 24 },
-  primaryBtn: { width: '100%', height: 64, borderRadius: 24, overflow: 'hidden', ...theme.shadows.glow },
+  primaryBtn: { width: '100%', height: 64, borderRadius: 24, overflow: 'hidden' },
   btnInner: { 
     flex: 1, 
     flexDirection: 'row', 
@@ -211,10 +213,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     gap: 12,
   },
-  btnText: { color: theme.colors.background, fontSize: 18, fontWeight: '900', letterSpacing: 1 },
-  btnIcon: { color: theme.colors.background, fontSize: 22, fontWeight: '900' },
+  btnText: { color: '#0F172A', fontSize: 18, fontWeight: '900', letterSpacing: 1 },
+  btnIcon: { color: '#0F172A', fontSize: 22, fontWeight: '900' },
   waitingContainer: { alignItems: 'center', gap: 12 },
-  waitingLabel: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '600', fontStyle: 'italic' },
+  waitingLabel: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600', fontStyle: 'italic' },
   disabledBtn: { opacity: 0.5 },
   versionText: { fontSize: 8, color: 'rgba(255,255,255,0.15)', fontWeight: '800', letterSpacing: 2 },
 });

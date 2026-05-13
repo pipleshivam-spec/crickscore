@@ -12,6 +12,7 @@ const { width } = Dimensions.get('window');
 
 export default function MatchesHistory() {
   const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,14 +23,16 @@ export default function MatchesHistory() {
   const loadMatches = async () => {
     setLoading(true);
     try {
-      const local = await localDb.getMatches();
+      const localRaw = await localDb.getMatches();
+      const local = localRaw.map((m: any) => ({ ...m, isLocal: true }));
+      
       const { data: remote } = await supabase
         .from('matches')
         .select('*, innings(*)')
         .order('created_at', { ascending: false });
 
-      const combined = [...(local || []), ...(remote || [])].sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      const combined = [...local, ...(remote || [])].sort((a, b) => 
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       );
       setMatches(combined);
     } catch (err) {
@@ -165,8 +168,6 @@ export default function MatchesHistory() {
     );
   };
 
-  const styles = createStyles(theme);
-
   return (
     <View style={styles.container}>
       <LinearGradient colors={[theme.colors.background, '#000']} style={StyleSheet.absoluteFill} />
@@ -208,95 +209,106 @@ export default function MatchesHistory() {
 
 const createStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  safeArea: { flex: 1 },
-  header: { padding: 40, paddingBottom: 16 },
+  safeArea: { flex: 1, paddingTop: 10 },
+  header: { padding: 32, paddingBottom: 24 },
   title: { 
-    fontSize: theme.typography.size.xxl + 4, 
+    fontSize: 32, 
     fontFamily: theme.typography.fontFamily.bold, 
     color: '#FFF', 
-    letterSpacing: theme.typography.letterSpacing.tight 
+    letterSpacing: -1 
   },
   subtitle: { 
-    fontSize: theme.typography.size.xs - 1, 
+    fontSize: 9, 
     fontFamily: theme.typography.fontFamily.bold, 
     color: theme.colors.accent, 
-    letterSpacing: theme.typography.letterSpacing.extraWide + 1, 
-    marginTop: 8, 
+    letterSpacing: 4, 
+    marginTop: 6, 
     textTransform: 'uppercase' 
   },
-  scroll: { padding: 32, paddingBottom: 120 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 120 },
   arenaInfo: { 
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 24,
+    padding: 24,
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    paddingHorizontal: 12,
     marginBottom: 32,
-    opacity: 0.8
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)'
   },
-  arenaStatTitle: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 3 },
-  arenaStatVal: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: -1 },
+  arenaStatTitle: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2 },
+  arenaStatVal: { fontSize: 32, fontWeight: '900', color: '#FFF', letterSpacing: -1 },
   loadingBox: { marginTop: 100, alignItems: 'center' },
-  statusText: { color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 24, fontWeight: '900', fontSize: 10, letterSpacing: 3 },
-  matchCardContainer: { marginBottom: 24 },
+  statusText: { color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 24, fontWeight: '900', fontSize: 9, letterSpacing: 3 },
+  
+  matchCardContainer: { marginBottom: 20 },
   matchCard: { 
-    borderRadius: 40, 
+    borderRadius: 24, 
     overflow: 'hidden',
-    borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(255,255,255,0.01)'
+    backgroundColor: 'rgba(255,255,255,0.01)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)'
   },
-  cardInner: { padding: 32 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
-  badgeRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  badgeLocal: { backgroundColor: 'rgba(59, 130, 246, 0.08)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.2)' },
-  badgeCloud: { backgroundColor: 'rgba(139, 92, 246, 0.08)', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' },
-  badgeText: { fontSize: 8, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
-  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-  liveText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
-  dateText: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 1 },
-  teamsSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 },
+  cardInner: { padding: 24 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  badgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  badgeLocal: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.2)' },
+  badgeCloud: { backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' },
+  badgeText: { fontSize: 7, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#EF4444' },
+  liveText: { fontSize: 7, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
+  dateText: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 0.5 },
+  
+  teamsSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   teamEntry: { flex: 1 },
   teamName: { 
-    fontSize: theme.typography.size.lg, 
+    fontSize: 15, 
     fontFamily: theme.typography.fontFamily.bold, 
     color: '#FFF', 
-    letterSpacing: theme.typography.letterSpacing.tight 
+    letterSpacing: -0.3
   },
   teamScore: { 
-    fontSize: theme.typography.size.md, 
+    fontSize: 18, 
     fontFamily: theme.typography.fontFamily.bold, 
     color: theme.colors.accent, 
-    marginTop: 8 
+    marginTop: 4 
   },
-  vsCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.02)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20 },
-  vsText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.1)' },
+  vsCircle: { 
+    width: 32, height: 32, borderRadius: 16, 
+    backgroundColor: 'rgba(255,255,255,0.03)', 
+    alignItems: 'center', justifyContent: 'center', 
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', 
+    marginHorizontal: 16 
+  },
+  vsText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.1)' },
+  
   cardFooter: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    paddingTop: 24, 
+    paddingTop: 16, 
     borderTopWidth: 1, 
     borderTopColor: 'rgba(255,255,255,0.03)' 
   },
-  matchMeta: { alignItems: 'flex-start' },
+  matchMeta: { flexDirection: 'row', gap: 12 },
   metaLabel: { 
-    fontSize: theme.typography.size.xs - 2, 
+    fontSize: 8, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.2)', 
-    letterSpacing: 2 
+    color: 'rgba(255,255,255,0.15)', 
+    letterSpacing: 1 
   },
   metaVal: { 
-    fontSize: theme.typography.size.sm, 
-    fontFamily: theme.typography.fontFamily.semiBold, 
-    color: 'rgba(255,255,255,0.5)', 
-    marginTop: 4 
+    fontSize: 10, 
+    fontFamily: theme.typography.fontFamily.bold, 
+    color: 'rgba(255,255,255,0.4)', 
   },
-  miniDelete: { marginLeft: 'auto', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(239, 68, 68, 0.03)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.05)' },
-  miniDeleteText: { fontSize: 9, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
-  emptyBox: { marginTop: 60, borderRadius: 40, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
-  emptyInner: { padding: 64, alignItems: 'center' },
-  emptyIcon: { fontSize: 56, marginBottom: 24, opacity: 0.3 },
-  emptyText: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 4 },
-  emptySub: { color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: '700', marginTop: 16, textAlign: 'center', lineHeight: 18 },
+  miniDelete: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(239, 68, 68, 0.03)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.05)' },
+  miniDeleteText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 0.5 },
+  emptyBox: { marginTop: 40, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
+  emptyInner: { padding: 48, alignItems: 'center' },
+  emptyIcon: { fontSize: 40, marginBottom: 16, opacity: 0.3 },
+  emptyText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 2 },
+  emptySub: { color: 'rgba(255,255,255,0.15)', fontSize: 9, fontWeight: '700', marginTop: 12, textAlign: 'center', lineHeight: 16 },
 });

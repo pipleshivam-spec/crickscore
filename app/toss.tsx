@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '../src/lib/supabase';
+import { localDb } from '../src/lib/localDb';
 import { theme } from '../src/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TossCoin, TossCoinHandle } from '../src/components/TossCoin';
@@ -30,17 +30,63 @@ export default function Toss() {
   const handleTossChoice = async (choice: 'bat' | 'bowl') => {
     try {
       setLoading(true);
-      const battingTeam = tossResult.winner === team1Name ? (choice === 'bat' ? team1Name : team2Name) : (choice === 'bat' ? team2Name : team1Name);
+
+      const battingTeam = tossResult.winner === team1Name
+        ? (choice === 'bat' ? team1Name : team2Name)
+        : (choice === 'bat' ? team2Name : team1Name);
       const bowlingTeam = battingTeam === team1Name ? team2Name : team1Name;
 
-      await supabase.from('matches').update({ toss_winner: tossResult.winner, toss_choice: choice }).eq('id', matchId);
-      
-      const { data: inn1 } = await supabase.from('innings').insert([{ match_id: matchId, innings_number: 1, batting_team: battingTeam, bowling_team: bowlingTeam, status: 'active' }]).select().single();
-      await supabase.from('innings').insert([{ match_id: matchId, innings_number: 2, batting_team: bowlingTeam, bowling_team: battingTeam, status: 'waiting' }]);
+      // Load the match from local storage
+      const match = await localDb.getMatch(matchId!);
+      if (!match) {
+        Alert.alert('ERROR', 'Match not found. Please restart.');
+        return;
+      }
 
-      router.push({ pathname: '/scoring', params: { matchId, inningsId: inn1.id } });
+      // Create innings records inside the match
+      const inn1Id = `${matchId}_inn1`;
+      const inn2Id = `${matchId}_inn2`;
+
+      const updatedMatch = {
+        ...match,
+        toss_winner: tossResult.winner,
+        toss_choice: choice,
+        innings: [
+          {
+            id: inn1Id,
+            match_id: matchId,
+            innings_number: 1,
+            batting_team: battingTeam,
+            bowling_team: bowlingTeam,
+            status: 'active',
+            total_runs: 0,
+            total_wickets: 0,
+            total_balls: 0,
+            balls: [],
+          },
+          {
+            id: inn2Id,
+            match_id: matchId,
+            innings_number: 2,
+            batting_team: bowlingTeam,
+            bowling_team: battingTeam,
+            status: 'waiting',
+            total_runs: 0,
+            total_wickets: 0,
+            total_balls: 0,
+            balls: [],
+          },
+        ],
+      };
+
+      await localDb.saveMatch(updatedMatch);
+
+      router.push({
+        pathname: '/scoring',
+        params: { matchId, inningsId: inn1Id, isLocal: 'true' }
+      });
     } catch (err) {
-      Alert.alert('ERROR', 'Elite Cloud Sync failed. Please try again.');
+      Alert.alert('ERROR', 'Could not start match. Please try again.');
     } finally {
       setLoading(false);
     }

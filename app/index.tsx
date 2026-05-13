@@ -24,8 +24,8 @@ export default function Home() {
     checkActiveSession();
     loadLifetimeStats();
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 1000, easing: (t) => t * (2 - t), useNativeDriver: true })
+      Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 1000, easing: (t) => t * (2 - t), useNativeDriver: false })
     ]).start();
   }, []);
 
@@ -85,14 +85,8 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient 
-        colors={[theme.colors.gradientStart, theme.colors.background, '#000']} 
-        style={StyleSheet.absoluteFill} 
-      />
-      
-      {/* Dynamic Background Elements */}
-      <View style={[styles.glowBall, { top: height * 0.1, right: -50, backgroundColor: theme.colors.accent + '20' }]} />
-      <View style={[styles.glowBall, { bottom: height * 0.2, left: -100, backgroundColor: theme.colors.success + '15' }]} />
+      <View style={[styles.glowBall, { backgroundColor: '#10B981', top: -100, left: -100 }]} />
+      <View style={[styles.glowBall, { backgroundColor: '#3B82F6', bottom: -100, right: -100 }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -113,7 +107,7 @@ export default function Home() {
               <TouchableOpacity 
                 style={styles.profileBtn} 
                 activeOpacity={0.7}
-                onPress={() => setShowProfile(true)}
+                onPress={() => router.push('/settings')}
               >
                 <Text style={styles.profileEmoji}>⚙️</Text>
               </TouchableOpacity>
@@ -125,22 +119,29 @@ export default function Home() {
               {activeSession ? (
                 <TouchableOpacity style={styles.liveMatchCard} onPress={() => handleResume()} activeOpacity={0.9}>
                   <LinearGradient 
-                    colors={['rgba(255, 65, 108, 0.2)', 'rgba(255, 65, 108, 0.05)']} 
+                    colors={['rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.05)']} 
                     style={styles.cardInner}
                   >
                     <View style={styles.cardHeader}>
                       <View style={styles.liveIndicator}>
                         <View style={styles.liveDot} />
-                        <Text style={styles.liveText}>LIVE NOW</Text>
+                        <Text style={styles.liveText}>LIVE BROADCAST</Text>
                       </View>
-                      <Text style={styles.matchType}>T20 SERIES</Text>
+                      <Text style={styles.matchType}>{activeSession.matches?.[0]?.matchType?.toUpperCase() || 'LIVE MATCH'}</Text>
                     </View>
+                    
                     <View style={styles.matchInfo}>
-                      <Text style={styles.teamsText} numberOfLines={1}>
-                        {activeSession.matches?.[0]?.team_a} vs {activeSession.matches?.[0]?.team_b}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.teamsText} numberOfLines={1}>
+                          {activeSession.matches?.[0]?.team_a} vs {activeSession.matches?.[0]?.team_b}
+                        </Text>
+                        <Text style={styles.liveScoreMini}>
+                          {activeSession.matches?.[0]?.innings?.[0]?.total_runs || 0}/{activeSession.matches?.[0]?.innings?.[0]?.total_wickets || 0}
+                          <Text style={{ opacity: 0.4 }}> ({Math.floor((activeSession.matches?.[0]?.innings?.[0]?.total_balls || 0) / 6)}.{ (activeSession.matches?.[0]?.innings?.[0]?.total_balls || 0) % 6 } ov)</Text>
+                        </Text>
+                      </View>
                       <View style={styles.resumeBtn}>
-                        <Text style={styles.resumeBtnText}>RESUME</Text>
+                        <Text style={styles.resumeBtnText}>GO LIVE</Text>
                       </View>
                     </View>
                   </LinearGradient>
@@ -159,56 +160,56 @@ export default function Home() {
 
             <View style={styles.statsBento}>
               <View style={styles.bentoSmall}>
-                <LinearGradient colors={['rgba(59, 130, 246, 0.1)', 'transparent']} style={styles.bentoInner}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                   <Text style={styles.bentoVal}>{stats.matches}</Text>
                   <Text style={styles.bentoLabel}>GAMES</Text>
-                </LinearGradient>
+                </View>
               </View>
               <View style={styles.bentoSmall}>
-                <LinearGradient colors={['rgba(16, 185, 129, 0.1)', 'transparent']} style={styles.bentoInner}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
                   <Text style={styles.bentoVal}>{stats.runs}</Text>
                   <Text style={styles.bentoLabel}>TOTAL RUNS</Text>
-                </LinearGradient>
+                </View>
               </View>
               <View style={styles.bentoSmall}>
-                <LinearGradient colors={['rgba(239, 68, 68, 0.1)', 'transparent']} style={styles.bentoInner}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
                   <Text style={styles.bentoVal}>{stats.wickets}</Text>
-                  <Text style={styles.bentoLabel}>WKTS</Text>
-                </LinearGradient>
+                  <Text style={styles.bentoLabel}>WICKETS</Text>
+                </View>
               </View>
             </View>
 
             <View style={styles.actionsGrid}>
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/create')} activeOpacity={0.8}>
-                <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.gridInner}>
-                  <Text style={styles.gridIcon}>🏏</Text>
-                  <Text style={styles.gridTitle}>START MATCH</Text>
-                  <Text style={styles.gridSub}>Pro Session</Text>
-                </LinearGradient>
+                    <View style={[styles.gridInner, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                      <Text style={styles.gridIcon}>🏆</Text>
+                      <Text style={styles.gridTitle}>LOCAL MATCH</Text>
+                      <Text style={styles.gridSub}>QUICK START</Text>
+                    </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/local-setup')} activeOpacity={0.8}>
-                <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.gridInner}>
-                  <Text style={styles.gridIcon}>📶</Text>
-                  <Text style={styles.gridTitle}>OFFLINE MODE</Text>
-                  <Text style={styles.gridSub}>No Internet</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/matches')} activeOpacity={0.8}>
-                <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.gridInner}>
-                  <Text style={styles.gridIcon}>📜</Text>
-                  <Text style={styles.gridTitle}>HISTORY</Text>
-                  <Text style={styles.gridSub}>Past Results</Text>
-                </LinearGradient>
+              <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/tournaments')} activeOpacity={0.8}>
+                <View style={[styles.gridInner, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                  <Text style={styles.gridIcon}>📊</Text>
+                  <Text style={styles.gridTitle}>TOURNAMENTS</Text>
+                  <Text style={styles.gridSub}>LEAGUE MODE</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/join')} activeOpacity={0.8}>
-                <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.gridInner}>
-                  <Text style={styles.gridIcon}>🤝</Text>
-                  <Text style={styles.gridTitle}>JOIN GAME</Text>
-                  <Text style={styles.gridSub}>View Score</Text>
-                </LinearGradient>
+                    <View style={[styles.gridInner, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                      <Text style={styles.gridIcon}>📶</Text>
+                      <Text style={styles.gridTitle}>JOIN LIVE</Text>
+                      <Text style={styles.gridSub}>SYNC BY CODE</Text>
+                    </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/local-setup')} activeOpacity={0.8}>
+                    <View style={[styles.gridInner, { backgroundColor: '#1e293b' }]}>
+                      <Text style={styles.gridIcon}>📶</Text>
+                      <Text style={styles.gridTitle}>OFFLINE MODE</Text>
+                      <Text style={styles.gridSub}>NO INTERNET</Text>
+                    </View>
               </TouchableOpacity>
             </View>
 
@@ -255,16 +256,16 @@ export default function Home() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  glowBall: { position: 'absolute', width: 400, height: 400, borderRadius: 200 },
-  safeArea: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#000' },
+  glowBall: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.2, filter: 'blur(60px)' },
+  safeArea: { flex: 1, paddingTop: 10 },
   scroll: { flexGrow: 1 },
-  content: { paddingHorizontal: 24, paddingVertical: 20, paddingBottom: 120 },
+  content: { paddingHorizontal: 20, paddingVertical: 24, paddingBottom: 120 },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   branding: { 
     flexDirection: 'row', 
@@ -272,68 +273,70 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 12,
   },
   logoImage: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   titleWrapper: {
     justifyContent: 'center',
   },
   title: { 
-    fontSize: 20, 
+    fontSize: 22, 
     fontWeight: '900', 
-    color: theme.colors.text,
-    letterSpacing: 1,
+    color: '#FFF', 
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 8,
-    fontWeight: '800',
+    fontWeight: '900',
     color: theme.colors.accent,
-    marginTop: 10,
+    letterSpacing: 2,
+    marginTop: 4,
+    textTransform: 'uppercase'
   },
-  logo: { width: 100, height: 32 },
   profileBtn: { 
     width: 44, 
     height: 44, 
     borderRadius: 15, 
-    backgroundColor: 'rgba(255,255,255,0.03)', 
+    backgroundColor: 'rgba(255,255,255,0.02)', 
     alignItems: 'center', 
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   profileEmoji: { fontSize: 16 },
   mainHub: { marginBottom: 32 },
   hubLabel: {
-    fontSize: theme.typography.size.xs,
+    fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
-    color: theme.colors.textMuted,
-    letterSpacing: theme.typography.letterSpacing.extraWide,
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 3,
     marginBottom: 16,
     paddingHorizontal: 4,
     textTransform: 'uppercase',
   },
   liveMatchCard: {
-    height: 120,
-    borderRadius: 28,
+    height: 140,
+    borderRadius: 32,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: `${theme.colors.accent}40`,
-    ...theme.shadows.card,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.01)'
   },
   emptyCard: {
     height: 100,
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.01)'
   },
   cardInner: {
     flex: 1,
-    padding: 20,
+    padding: 24,
     justifyContent: 'space-between',
   },
   cardHeader: {
@@ -344,45 +347,53 @@ const createStyles = (theme: any) => StyleSheet.create({
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.danger,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)'
   },
   liveDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FFF',
-    marginRight: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
+    marginRight: 6,
   },
-  liveText: { fontSize: 8, fontWeight: '900', color: '#FFF' },
-  matchType: { fontSize: 9, fontWeight: '800', color: theme.colors.textMuted },
+  liveText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
+  matchType: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.25)', letterSpacing: 1.5 },
   matchInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   teamsText: { 
-    fontSize: theme.typography.size.lg, 
+    fontSize: 20, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: theme.colors.text, 
+    color: '#FFF', 
     flex: 1,
-    letterSpacing: theme.typography.letterSpacing.tight,
+    letterSpacing: -0.5,
   },
   resumeBtn: { 
-    backgroundColor: '#FFF', 
+    backgroundColor: theme.colors.accent, 
     paddingHorizontal: 16, 
     paddingVertical: 10, 
     borderRadius: 12 
   },
   resumeBtnText: { 
-    fontSize: theme.typography.size.xs, 
+    fontSize: 10, 
     fontFamily: theme.typography.fontFamily.bold, 
     color: '#000',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  emptyText: { color: theme.colors.textMuted, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  liveScoreMini: {
+    fontSize: 14,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: theme.colors.accent,
+    marginTop: 2,
+  },
+  emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   statsBento: {
     flexDirection: 'row',
@@ -391,29 +402,29 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   bentoSmall: {
     flex: 1,
-    height: 80,
-    borderRadius: 20,
+    height: 84,
+    borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'rgba(255,255,255,0.01)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
   bentoInner: {
     flex: 1,
-    padding: 12,
+    padding: 16,
     justifyContent: 'center',
   },
   bentoVal: {
-    fontSize: theme.typography.size.xl,
-    fontFamily: theme.typography.fontFamily.manrope,
+    fontSize: 24,
+    fontFamily: theme.typography.fontFamily.bold,
     color: '#FFF',
-    letterSpacing: theme.typography.letterSpacing.tight,
+    letterSpacing: -0.5,
   },
   bentoLabel: {
-    fontSize: theme.typography.size.xs - 2,
+    fontSize: 7,
     fontFamily: theme.typography.fontFamily.bold,
-    color: theme.colors.textMuted,
-    letterSpacing: theme.typography.letterSpacing.wide,
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 1.5,
     marginTop: 4,
     textTransform: 'uppercase',
   },
@@ -421,19 +432,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 40,
   },
   gridBtn: {
-    width: (width - 60) / 2,
+    width: (width - 52) / 2,
     height: 120,
-    borderRadius: 24,
+    borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.01)'
   },
   gridInner: {
     flex: 1,
-    padding: 20,
+    padding: 24,
     justifyContent: 'center',
   },
   gridIcon: {
@@ -441,96 +453,35 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 12,
   },
   gridTitle: {
-    fontSize: theme.typography.size.md,
+    fontSize: 14,
     fontFamily: theme.typography.fontFamily.bold,
     color: '#FFF',
-    letterSpacing: theme.typography.letterSpacing.normal,
+    letterSpacing: 0,
   },
   gridSub: {
-    fontSize: theme.typography.size.xs - 1,
-    fontFamily: theme.typography.fontFamily.medium,
-    color: 'rgba(255,255,255,0.4)',
-    marginTop: 6,
+    fontSize: 8,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.25)',
+    marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
 
-  themeSection: { marginBottom: 32 },
-  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
-  swatchBtn: { alignItems: 'center', gap: 8, padding: 8, borderRadius: 16, width: (width - 70) / 3 },
-  swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
-  swatchRing: { position: 'absolute', top: 4, left: '50%', marginLeft: -20, width: 40, height: 40, borderRadius: 20, borderWidth: 1, opacity: 0.5 },
-  swatchLabel: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1 },
-
-  recentSection: { marginBottom: 32 },
-  recentTeams: { 
-    fontSize: theme.typography.size.md, 
-    fontFamily: theme.typography.fontFamily.bold, 
-    color: '#FFF' 
-  },
-  recentDate: { 
-    fontSize: theme.typography.size.xs - 1, 
-    fontFamily: theme.typography.fontFamily.semiBold, 
-    color: theme.colors.textMuted, 
-    marginTop: 4 
-  },
-  recentItemContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  recentItem: { 
-    flex: 1,
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(255,255,255,0.03)', 
-    borderRadius: 20, 
-    padding: 16, 
-    borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.05)' 
-  },
-  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
-  typeText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.4)' },
-  deleteMiniBtn: {
-    width: 44,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,65,108,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,65,108,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteIconText: { fontSize: 14 },
-  arrowIcon: { color: theme.colors.textMuted, fontSize: 16 },
-  noRecentBox: { 
-    padding: 30, 
-    alignItems: 'center', 
-    borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.03)', 
-    borderRadius: 20,
-    borderStyle: 'dashed',
-  },
-  noRecentText: { color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-
   footer: { alignItems: 'center', paddingBottom: 40 },
-  footerText: { fontSize: 8, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
-  footerSub: { fontSize: 6, color: `${theme.colors.accent}40`, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 4, marginTop: 4 },
+  footerText: { fontSize: 8, color: 'rgba(255,255,255,0.2)', fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
+  footerSub: { fontSize: 6, color: theme.colors.accent, opacity: 0.2, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 4, marginTop: 4 },
   resetBtn: {
-    marginTop: 20,
+    marginTop: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,65,108,0.2)',
-    backgroundColor: 'rgba(255,65,108,0.05)',
+    borderColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.02)',
   },
   resetBtnText: {
-    color: theme.colors.danger,
-    fontSize: 9,
+    color: 'rgba(239, 68, 68, 0.4)',
+    fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
     letterSpacing: 1,
   },

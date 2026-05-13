@@ -14,8 +14,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', icon: '⌂', route: '/' },
   { label: 'Matches', icon: '🏏', route: '/matches' },
-  { label: 'Players', icon: '👥', route: '/players' },
-  { label: 'Settings', icon: '⚙', route: '/settings' },
+  { label: 'League', icon: '🏆', route: '/tournaments' },
+  { label: 'Vault', icon: '🏛️', route: '/career-vault' },
 ];
 
 export const BottomNavBar: React.FC = () => {

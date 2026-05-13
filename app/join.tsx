@@ -45,10 +45,7 @@ export default function JoinSession() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient 
-        colors={[theme.colors.gradientStart, theme.colors.background, '#000']} 
-        style={StyleSheet.absoluteFill} 
-      />
+      {/* Global ProfessionalBackground provides the depth here */}
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -57,11 +54,11 @@ export default function JoinSession() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Text style={styles.title}>JOIN NODE</Text>
+            <Text style={styles.title}>JOIN LIVE SERVER</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>ELITE ACCESS PORTAL</Text>
+              <Text style={styles.badgeText}>ELITE BROADCAST SYNC</Text>
             </View>
-            <Text style={styles.subtitle}>Enter the 6-character secure code to synchronize with the match hub.</Text>
+            <Text style={styles.subtitle}>Enter the 6-character match code to join the live scoring broadcast.</Text>
           </View>
 
           <View style={styles.inputSection}>
@@ -116,7 +113,7 @@ export default function JoinSession() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1 },
   content: { flex: 1, padding: 32, justifyContent: 'space-between' },
   backBtn: {

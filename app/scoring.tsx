@@ -8,6 +8,7 @@ import { supabase } from '../src/lib/supabase';
 import { useAppTheme } from '../src/theme/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { classifyDelivery, checkInningsEnd, needsNewBowler, generateBallCommentary } from '../src/lib/scoringEngine';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Import Components
 import { ScoreHeader } from '../src/components/ScoreHeader';
@@ -35,6 +36,17 @@ import { localDb } from '../src/lib/localDb';
 
 const { width } = Dimensions.get('window');
 const isSmallScreen = width < 380;
+
+interface InningsReportSummary {
+  battingTeam: string;
+  bowlingTeam: string;
+  runs: number;
+  wickets: number;
+  balls: number;
+  extras: number;
+  fow: any[];
+  players: any[];
+}
 
 // MoM calculation helper
 const calcMomScore = (p: any): number => {
@@ -239,11 +251,11 @@ export default function Scoring() {
   const calculateStateFromHistory = (balls: any[], currentInnings?: any, overrideOvers?: number) => {
     const matchOvers = overrideOvers || matchData?.overs || 20;
     let runs = 0, wickets = 0, totalBalls = 0, extras = 0;
+    const pMap = new Map<string, PlayerPerformance>();
     let currentOver: string[] = [];
     let pRuns = 0, pBalls = 0;
 
     balls.forEach(b => {
-      // Use the professional engine to classify each delivery
       const resultStr = b.is_wicket ? 'W' :
         b.type === 'wide' || b.is_wide ? 'Wd' :
           b.type === 'no_ball' || b.is_no_ball ? 'NB' :
@@ -256,6 +268,29 @@ export default function Scoring() {
       extras += c.extrasRuns;
       pRuns += c.totalRuns;
 
+      // Rebuild Player Performance Map for MoM and Career
+      if (b.batsman_id) {
+        const existing = pMap.get(b.batsman_id) || { id: b.batsman_id, name: b.batsman_name || 'Batsman', runsScored: 0, ballsFaced: 0, fours: 0, sixes: 0, wicketsTaken: 0, runsConceded: 0, oversBowled: 0, maidens: 0 };
+        if (b.type !== 'wide') {
+          existing.runsScored += b.runs;
+          if (c.countsAsBall) existing.ballsFaced += 1;
+        }
+        if (b.runs === 4) existing.fours += 1;
+        if (b.runs === 6) existing.sixes += 1;
+        pMap.set(b.batsman_id, existing);
+      }
+      if (b.bowler_id) {
+        const existing = pMap.get(b.bowler_id) || { id: b.bowler_id, name: b.bowler_name || 'Bowler', runsScored: 0, ballsFaced: 0, fours: 0, sixes: 0, wicketsTaken: 0, runsConceded: 0, oversBowled: 0, maidens: 0 };
+        if (b.type !== 'bye' && b.type !== 'leg_bye') {
+          existing.runsConceded += (b.runs + (b.type === 'wide' || b.type === 'no_ball' ? b.extras : 0));
+        }
+        if (c.countsAsBall) existing.oversBowled += 1;
+        if (b.is_wicket) {
+          existing.wicketsTaken += 1;
+        }
+        pMap.set(b.bowler_id, existing);
+      }
+
       if (b.is_wicket) { wickets++; pRuns = 0; pBalls = 0; }
 
       if (c.countsAsBall) {
@@ -266,26 +301,37 @@ export default function Scoring() {
         currentOver.push(b.is_wide || b.type === 'wide' ? 'Wd' : 'NB');
       }
 
-      // End of over — reset
       if (currentOver.filter(x => x !== 'Wd' && x !== 'NB').length === 6) {
         currentOver = [];
       }
     });
 
-    setScore(prev => ({
-      ...prev, runs, wickets, balls: totalBalls, extras, currentOver,
-      partnership: { runs: pRuns, balls: pBalls },
-      striker: currentInnings?.lastStriker || prev.striker,
-      nonStriker: currentInnings?.lastNonStriker || prev.nonStriker,
-      strikerStats: currentInnings?.lastStrikerStats || prev.strikerStats,
-      nonStrikerStats: currentInnings?.lastNonStrikerStats || prev.nonStrikerStats,
-      bowler: currentInnings?.lastBowler || prev.bowler,
-      bowlerStats: currentInnings?.lastBowlerStats || prev.bowlerStats,
-      fow: currentInnings?.fow || [],
-      dismissed: currentInnings?.dismissed || [],
-      bowlers: currentInnings?.bowlers || [],
-      fullCommentary: currentInnings?.fullCommentary || [],
-    }));
+    playersRef.current = pMap;
+
+    setScore(prev => {
+      const sId = currentInnings?.lastStriker?.id || prev.striker?.id;
+      const nsId = currentInnings?.lastNonStriker?.id || prev.nonStriker?.id;
+      const bId = currentInnings?.lastBowler?.id || prev.bowler?.id;
+
+      const sP = sId ? pMap.get(sId) : null;
+      const nsP = nsId ? pMap.get(nsId) : null;
+      const bP = bId ? pMap.get(bId) : null;
+
+      return {
+        ...prev, runs, wickets, balls: totalBalls, extras, currentOver,
+        partnership: { runs: pRuns, balls: pBalls },
+        striker: currentInnings?.lastStriker || prev.striker,
+        nonStriker: currentInnings?.lastNonStriker || prev.nonStriker,
+        strikerStats: sP ? { runs: sP.runsScored, balls: sP.ballsFaced, fours: sP.fours, sixes: sP.sixes } : (currentInnings?.lastStrikerStats || prev.strikerStats),
+        nonStrikerStats: nsP ? { runs: nsP.runsScored, balls: nsP.ballsFaced, fours: nsP.fours, sixes: nsP.sixes } : (currentInnings?.lastNonStrikerStats || prev.nonStrikerStats),
+        bowler: currentInnings?.lastBowler || prev.bowler,
+        bowlerStats: bP ? { id: bP.id, name: bP.name, balls: bP.oversBowled, runs: bP.runsConceded, wickets: bP.wicketsTaken, maidens: bP.maidens } : (currentInnings?.lastBowlerStats || prev.bowlerStats),
+        fow: currentInnings?.fow || [],
+        dismissed: currentInnings?.dismissed || [],
+        bowlers: currentInnings?.bowlers || [],
+        fullCommentary: currentInnings?.fullCommentary || [],
+      };
+    });
 
     const reason = checkInningsEnd(wickets, totalBalls, matchOvers, runs, target);
     // NOTE: Do NOT call handleInningsEnd here during a replay/restore.
@@ -303,97 +349,107 @@ export default function Scoring() {
       wickets: finalWickets,
       balls: finalBalls,
       players: Array.from(playersRef.current.values()),
-      history: [...history]
+      history: [...history],
+      fow: score.fow,
+      extras: score.extras
     };
 
     if (isFirstInnings) {
       setInnings1Data(currentInningsSummary);
     }
 
-    const updateTournamentStandings = async (tourId: string, inn1: any, inn2: any) => {
+    const updateTournamentStandings = async (tourId: string | null, inn1: any, inn2: any) => {
       try {
-        const tour = await localDb.getTournament(tourId);
-        if (!tour) return;
-
-        const teams = [...tour.teams];
-        const teamAIndex = teams.findIndex((t: any) => t.name === inn1.battingTeam);
-        const teamBIndex = teams.findIndex((t: any) => t.name === inn2.battingTeam);
-
-        if (teamAIndex === -1 || teamBIndex === -1) return;
-
-        const teamA = teams[teamAIndex];
-        const teamB = teams[teamBIndex];
-
-        teamA.played = (teamA.played || 0) + 1;
-        teamB.played = (teamB.played || 0) + 1;
-
-        const targetVal = inn1.runs + 1;
-        if (inn2.runs >= targetVal) {
-          teamB.won = (teamB.won || 0) + 1;
-          teamB.points = (teamB.points || 0) + 2;
-          teamA.lost = (teamA.lost || 0) + 1;
-        } else if (inn2.runs < inn1.runs) {
-          teamA.won = (teamA.won || 0) + 1;
-          teamA.points = (teamA.points || 0) + 2;
-          teamB.lost = (teamB.lost || 0) + 1;
+        const allTournaments = await localDb.getTournaments();
+        
+        let targets = [];
+        if (tourId) {
+          const t = allTournaments.find((t: any) => t.id === tourId);
+          if (t) targets.push(t);
         } else {
-          teamA.draw = (teamA.draw || 0) + 1;
-          teamB.draw = (teamB.draw || 0) + 1;
-          teamA.points = (teamA.points || 0) + 1;
-          teamB.points = (teamB.points || 0) + 1;
+          targets = allTournaments.filter((t: any) => {
+            const hasT1 = t.teams.some((team: any) => team.name.toLowerCase() === inn1.battingTeam.toLowerCase());
+            const hasT2 = t.teams.some((team: any) => team.name.toLowerCase() === inn2.battingTeam.toLowerCase());
+            return hasT1 && hasT2;
+          });
         }
 
-        const oversA = inn1.balls / 6 || 0.1;
-        const oversB = inn2.balls / 6 || 0.1;
-        const tourOvers = tour.overs || 20;
+        for (const tour of targets) {
+          const teams = [...tour.teams];
+          const tAIdx = teams.findIndex((t: any) => t.name.toLowerCase() === inn1.battingTeam.toLowerCase());
+          const tBIdx = teams.findIndex((t: any) => t.name.toLowerCase() === inn2.battingTeam.toLowerCase());
 
-        teamA.totalRunsScored = (teamA.totalRunsScored || 0) + inn1.runs;
-        teamA.totalOversFaced = (teamA.totalOversFaced || 0) + (inn1.wickets === 10 ? tourOvers : oversA);
-        teamA.totalRunsConceded = (teamA.totalRunsConceded || 0) + inn2.runs;
-        teamA.totalOversBowled = (teamA.totalOversBowled || 0) + (inn2.wickets === 10 ? tourOvers : oversB);
+          if (tAIdx === -1 || tBIdx === -1) continue;
 
-        teamB.totalRunsScored = (teamB.totalRunsScored || 0) + inn2.runs;
-        teamB.totalOversFaced = (teamB.totalOversFaced || 0) + (inn2.wickets === 10 ? tourOvers : oversB);
-        teamB.totalRunsConceded = (teamB.totalRunsConceded || 0) + inn1.runs;
-        teamB.totalOversBowled = (teamB.totalOversBowled || 0) + (inn1.wickets === 10 ? tourOvers : oversA);
+          const teamA = { ...teams[tAIdx] };
+          const teamB = { ...teams[tBIdx] };
+          const targetVal = inn1.runs + 1;
+          const tourOvers = tour.overs || 20;
 
-        const nrrScoredA = teamA.totalOversFaced > 0 ? (teamA.totalRunsScored / teamA.totalOversFaced) : 0;
-        const nrrConcededA = teamA.totalOversBowled > 0 ? (teamA.totalRunsConceded / teamA.totalOversBowled) : 0;
-        teamA.nrr = nrrScoredA - nrrConcededA;
+          teamA.played = (teamA.played || 0) + 1;
+          teamB.played = (teamB.played || 0) + 1;
 
-        const nrrScoredB = teamB.totalOversFaced > 0 ? (teamB.totalRunsScored / teamB.totalOversFaced) : 0;
-        const nrrConcededB = teamB.totalOversBowled > 0 ? (teamB.totalRunsConceded / teamB.totalOversBowled) : 0;
-        teamB.nrr = nrrScoredB - nrrConcededB;
+          if (inn2.runs >= targetVal) {
+            teamB.won = (teamB.won || 0) + 1;
+            teamB.points = (teamB.points || 0) + 2;
+            teamA.lost = (teamA.lost || 0) + 1;
+          } else if (inn2.runs < inn1.runs) {
+            teamA.won = (teamA.won || 0) + 1;
+            teamA.points = (teamA.points || 0) + 2;
+            teamB.lost = (teamB.lost || 0) + 1;
+          } else {
+            teamA.draw = (teamA.draw || 0) + 1;
+            teamB.draw = (teamB.draw || 0) + 1;
+            teamA.points = (teamA.points || 0) + 1;
+            teamB.points = (teamB.points || 0) + 1;
+          }
 
-        tour.teams = teams;
-        if (!tour.matches) tour.matches = [];
-        
-        const resultStr = inn2.runs >= targetVal 
+          const oversA = inn1.balls / 6 || 0.1;
+          const oversB = inn2.balls / 6 || 0.1;
+
+          teamA.totalRunsScored = (teamA.totalRunsScored || 0) + inn1.runs;
+          teamA.totalOversFaced = (teamA.totalOversFaced || 0) + (inn1.wickets === 10 ? tourOvers : oversA);
+          teamA.totalRunsConceded = (teamA.totalRunsConceded || 0) + inn2.runs;
+          teamA.totalOversBowled = (teamA.totalOversBowled || 0) + (inn2.wickets === 10 ? tourOvers : oversB);
+
+          teamB.totalRunsScored = (teamB.totalRunsScored || 0) + inn2.runs;
+          teamB.totalOversFaced = (teamB.totalOversFaced || 0) + (inn2.wickets === 10 ? tourOvers : oversB);
+          teamB.totalRunsConceded = (teamB.totalRunsConceded || 0) + inn1.runs;
+          teamB.totalOversBowled = (teamB.totalOversBowled || 0) + (inn1.wickets === 10 ? tourOvers : oversA);
+
+          teamA.nrr = (teamA.totalRunsScored / teamA.totalOversFaced) - (teamA.totalRunsConceded / teamA.totalOversBowled);
+          teamB.nrr = (teamB.totalRunsScored / teamB.totalOversFaced) - (teamB.totalRunsConceded / teamB.totalOversBowled);
+
+          teams[tAIdx] = teamA;
+          teams[tBIdx] = teamB;
+
+          if (!tour.matches) tour.matches = [];
+          const resultStr = inn2.runs >= targetVal 
             ? `${inn2.battingTeam} won by ${10 - inn2.wickets} wickets`
             : inn2.runs < inn1.runs - 1 || inn2.wickets === 10
               ? `${inn1.battingTeam} won by ${inn1.runs - inn2.runs} runs`
               : "Match Tied";
 
-        // IMPORTANT: Find the existing match in the tournament fixtures and update it
-        const matchIndex = tour.matches.findIndex((m: any) => m.id === matchId);
-        const matchEntry = {
-          id: matchId,
-          date: new Date().toISOString(),
-          teamA: inn1.battingTeam,
-          teamB: inn2.battingTeam,
-          status: 'finished',
-          result: resultStr
-        };
+          const mEntry = {
+            id: matchId,
+            date: new Date().toISOString(),
+            teamA: inn1.battingTeam,
+            teamB: inn2.battingTeam,
+            status: 'finished',
+            result: resultStr
+          };
 
-        if (matchIndex >= 0) {
-          tour.matches[matchIndex] = { ...tour.matches[matchIndex], ...matchEntry };
-        } else {
-          tour.matches.push(matchEntry);
+          const mIdx = tour.matches.findIndex((m: any) => m.id === matchId);
+          if (mIdx >= 0) {
+            tour.matches[mIdx] = { ...tour.matches[mIdx], ...mEntry };
+          } else {
+            tour.matches.push(mEntry);
+          }
+
+          await localDb.saveTournament({ ...tour, teams });
         }
-
-        await localDb.saveTournament(tour);
-      } catch (e) {
-        console.error('Points Table Update Error:', e);
+      } catch (err) {
+        console.error('Points Table Logic Error:', err);
       }
     };
 
@@ -586,10 +642,17 @@ export default function Scoring() {
     }
     await processBall(result);
   };
-
   const processBall = async (result: string, direction: string = 'none') => {
-    if (!score.striker || !score.nonStriker) { setModals(m => ({ ...m, setup: true })); return; }
-    if (!score.bowler) { setModals(m => ({ ...m, bowler: true })); return; }
+    if (!score.striker || !score.nonStriker) { 
+      Alert.alert('ASSIGN BATSMEN', 'Please select both striker and non-striker before scoring.');
+      setModals(m => ({ ...m, setup: true })); 
+      return; 
+    }
+    if (!score.bowler) { 
+      Alert.alert('ASSIGN BOWLER', 'Please select a bowler for the current over.');
+      setModals(m => ({ ...m, bowler: true })); 
+      return; 
+    }
 
     // ─── Professional Delivery Classification ───
 
@@ -608,7 +671,9 @@ export default function Scoring() {
       is_no_ball: c.type === 'no_ball',
       is_wicket: isWicket,
       batsman_id: score.striker.id,
+      batsman_name: score.striker.name,
       bowler_id: score.bowler.id,
+      bowler_name: score.bowler.name,
       direction,
       created_at: new Date().toISOString(),
       result_text: result,
@@ -706,28 +771,43 @@ export default function Scoring() {
       const matchOvers = matchData?.overs || 20;
 
       // Innings 1 Data
-      const inn1 = isFirstInnings ? {
+      const inn1: InningsReportSummary = isFirstInnings ? {
         battingTeam: inningsData?.batting_team || 'Team A',
         bowlingTeam: inningsData?.bowling_team || 'Team B',
         runs: score.runs,
         wickets: score.wickets,
         balls: score.balls,
+        extras: score.extras,
+        fow: score.fow,
         players: Array.from(playersRef.current.values()),
       } : (innings1Data || {
         battingTeam: matchData?.team_a || 'Team A',
         bowlingTeam: matchData?.team_b || 'Team B',
-        runs: 0, wickets: 0, balls: 0, players: []
+        runs: 0, wickets: 0, balls: 0, extras: 0, fow: [], players: []
       });
 
       // Innings 2 Data
-      const inn2 = !isFirstInnings ? {
+      const inn2: InningsReportSummary | null = !isFirstInnings ? {
         battingTeam: inningsData?.batting_team || 'Team B',
         bowlingTeam: inningsData?.bowling_team || 'Team A',
         runs: score.runs,
         wickets: score.wickets,
         balls: score.balls,
+        extras: score.extras,
+        fow: score.fow,
         players: Array.from(playersRef.current.values()),
       } : null;
+
+      // Type-safe result calculation
+      const resultText = !inn2 ? 'IN PROGRESS' : (
+        inn2.runs >= (inn1.runs + 1)
+          ? `${(inn2.battingTeam || 'TEAM').toUpperCase()} WON BY ${10 - inn2.wickets} WKTS`
+          : (inn2.wickets === 10 || Math.floor(inn2.balls / 6) >= matchOvers)
+            ? inn2.runs === inn1.runs 
+              ? 'MATCH TIED' 
+              : `${(inn1.battingTeam || 'TEAM').toUpperCase()} WON BY ${inn1.runs - inn2.runs} RUNS`
+            : 'IN PROGRESS'
+      );
 
       // MoM Calculation
       const allPlayers = Array.from(playersRef.current.values());
@@ -741,153 +821,240 @@ export default function Scoring() {
         <html>
           <head>
             <style>
-              @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-              body { font-family: 'Plus Jakarta Sans', sans-serif; background: #020617; color: #f8fafc; padding: 40px; margin: 0; line-height: 1.6; }
-              .container { max-width: 900px; margin: 0 auto; }
-              .header { text-align: center; margin-bottom: 40px; padding: 40px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 32px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-              .logo-text { font-size: 12px; font-weight: 800; color: #3b82f6; letter-spacing: 4px; margin-bottom: 12px; text-transform: uppercase; }
-              .title { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -1px; margin: 0; }
-              .match-info { font-size: 16px; color: #94a3b8; margin-top: 12px; font-weight: 600; }
+              @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+              body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #0f172a; padding: 0; margin: 0; line-height: 1.5; }
+              .page { padding: 40px; }
+              .header { background: #0f172a; color: white; padding: 40px; border-bottom: 8px solid #3b82f6; position: relative; overflow: hidden; }
+              .header::after { content: ""; position: absolute; top: -50%; right: -10%; width: 50%; height: 200%; background: rgba(59, 130, 246, 0.1); transform: rotate(15deg); }
+              .logo-brand { font-size: 12px; font-weight: 800; color: #3b82f6; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 8px; }
+              .match-title { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -1px; }
+              .match-meta { font-size: 14px; color: #94a3b8; margin-top: 8px; font-weight: 500; }
               
-              .mom-card { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); padding: 24px; border-radius: 24px; margin-bottom: 40px; display: flex; align-items: center; gap: 24px; color: #000; box-shadow: 0 10px 30px rgba(217, 119, 6, 0.3); }
-              .mom-badge { background: #000; color: #fbbf24; font-size: 10px; font-weight: 900; padding: 6px 12px; border-radius: 100px; letter-spacing: 2px; }
-              .mom-name { font-size: 24px; font-weight: 800; margin: 4px 0; }
-              .mom-stats { font-size: 14px; font-weight: 700; opacity: 0.8; }
+              .summary-bar { display: flex; background: white; margin-top: -30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 24px; margin-left: 40px; margin-right: 40px; position: relative; z-index: 10; border: 1px solid #e2e8f0; }
+              .summary-item { flex: 1; text-align: center; border-right: 1px solid #e2e8f0; }
+              .summary-item:last-child { border-right: none; }
+              .summary-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+              .summary-value { font-size: 24px; font-weight: 800; color: #0f172a; }
+              .summary-value.winner { color: #10b981; }
 
-              .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
-              .score-card { background: rgba(30, 41, 59, 0.5); padding: 32px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); text-align: center; backdrop-filter: blur(10px); }
-              .team-name { font-size: 14px; font-weight: 800; color: #3b82f6; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px; }
-              .score-val { font-size: 48px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 8px; }
-              .overs { font-size: 14px; color: #64748b; font-weight: 600; }
-              
-              .result-banner { text-align: center; font-size: 20px; font-weight: 800; color: #10b981; margin-bottom: 50px; background: rgba(16, 185, 129, 0.1); padding: 24px; border-radius: 24px; border: 1px solid rgba(16, 185, 129, 0.2); }
-              
-              .innings-section { margin-bottom: 60px; background: rgba(15, 23, 42, 0.3); padding: 32px; border-radius: 32px; border: 1px solid rgba(255,255,255,0.03); }
-              .innings-header { display: flex; align-items: center; margin-bottom: 32px; gap: 16px; }
-              .innings-title { font-size: 20px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
-              .innings-line { flex: 1; height: 1px; background: linear-gradient(90deg, #3b82f6, transparent); }
-              
-              .table-label { font-size: 11px; font-weight: 800; color: #3b82f6; margin-bottom: 16px; letter-spacing: 2px; text-transform: uppercase; }
-              table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 32px; background: rgba(30, 41, 59, 0.3); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
-              th { background: rgba(51, 65, 85, 0.3); color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: left; padding: 16px; font-weight: 800; letter-spacing: 1px; }
-              td { padding: 16px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e2e8f0; }
-              tr:last-child td { border-bottom: none; }
-              .name-cell { font-weight: 700; color: #fff; }
-              .stat-cell { font-weight: 800; color: #3b82f6; }
-              
-              .footer { text-align: center; font-size: 12px; color: #475569; margin-top: 80px; padding: 40px; border-top: 1px solid rgba(255,255,255,0.05); font-weight: 600; letter-spacing: 1px; }
+              .mom-section { margin: 40px; background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); border: 1px solid #fcd34d; border-radius: 20px; padding: 24px; display: flex; align-items: center; gap: 24px; }
+              .mom-badge { background: #d97706; color: white; font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 100px; text-transform: uppercase; margin-bottom: 8px; display: inline-block; }
+              .mom-name { font-size: 24px; font-weight: 800; color: #92400e; margin: 0; }
+              .mom-stats { font-size: 14px; color: #b45309; font-weight: 600; margin-top: 4px; }
+              .mom-icon { font-size: 40px; }
+
+              .innings-card { margin: 0 40px 40px 40px; background: white; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; }
+              .innings-header { background: #f1f5f9; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+              .innings-title { font-size: 16px; font-weight: 800; color: #0f172a; text-transform: uppercase; }
+              .innings-score { font-size: 18px; font-weight: 800; color: #3b82f6; }
+
+              table { width: 100%; border-collapse: collapse; }
+              th { text-align: left; background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 12px 24px; border-bottom: 1px solid #e2e8f0; }
+              td { padding: 12px 24px; font-size: 13px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+              .player-name { font-weight: 700; color: #0f172a; }
+              .stat-val { font-weight: 700; color: #0f172a; text-align: right; }
+              .stat-muted { color: #94a3b8; text-align: right; }
+
+              .extras-row { background: #f8fafc; padding: 12px 24px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+              .fow-section { padding: 16px 24px; }
+              .fow-title { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; }
+              .fow-list { font-size: 11px; color: #64748b; line-height: 1.8; }
+
+              .footer { text-align: center; padding: 40px; color: #94a3b8; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+              .watermark { position: fixed; bottom: 40px; right: 40px; opacity: 0.1; font-size: 40px; font-weight: 900; color: #0f172a; transform: rotate(-15deg); pointer-events: none; }
             </style>
           </head>
           <body>
-            <div class="container">
-              <div class="header">
-                <div class="logo-text">LazyCricScore Broadcast Engine</div>
-                <div class="title">OFFICIAL MATCH REPORT</div>
-                <div class="match-info">${inn1.battingTeam.toUpperCase()} vs ${inn2?.battingTeam?.toUpperCase() || inn1.bowlingTeam.toUpperCase()}</div>
-                <div class="match-info" style="font-size: 12px; opacity: 0.7;">
-                  ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} • ${matchOvers} OVERS MATCH
-                </div>
-              </div>
-
-              ${mom ? `
-                <div class="mom-card">
-                  <div style="flex: 1;">
-                    <div class="mom-badge">MAN OF THE MATCH</div>
-                    <div class="mom-name">${mom.name.toUpperCase()}</div>
-                    <div class="mom-stats">
-                      ${mom.runsScored > 0 ? `${mom.runsScored} RUNS (${mom.ballsFaced}b)` : ''}
-                      ${mom.runsScored > 0 && mom.wicketsTaken > 0 ? ' • ' : ''}
-                      ${mom.wicketsTaken > 0 ? `${mom.wicketsTaken} WICKETS (${Math.floor(mom.oversBowled / 6)}.${mom.oversBowled % 6}ov)` : ''}
-                    </div>
-                  </div>
-                  <div style="font-size: 40px;">🏆</div>
-                </div>
-              ` : ''}
-
-              <div class="score-grid">
-                <div class="score-card">
-                  <div class="team-name">${inn1.battingTeam}</div>
-                  <div class="score-val">${inn1.runs}/${inn1.wickets}</div>
-                  <div class="overs">${Math.floor(inn1.balls / 6)}.${inn1.balls % 6} OVERS</div>
-                </div>
-                <div class="score-card" style="${!inn2 ? 'opacity: 0.5;' : ''}">
-                  <div class="team-name">${inn2?.battingTeam || 'SECOND INNINGS'}</div>
-                  <div class="score-val">${inn2 ? `${inn2.runs}/${inn2.wickets}` : 'TBD'}</div>
-                  <div class="overs">${inn2 ? `${Math.floor(inn2.balls / 6)}.${inn2.balls % 6} OVERS` : 'YET TO BAT'}</div>
-                </div>
-              </div>
-
-              ${isComplete ? `
-                <div class="result-banner">
-                  ${(inn2?.runs || 0) >= targetVal
-                    ? `${inn2?.battingTeam.toUpperCase()} WON BY ${10 - (inn2?.wickets || 0)} WICKETS`
-                    : `${inn1.battingTeam.toUpperCase()} WON BY ${targetVal - (inn2?.runs || 0) - 1} RUNS`}
-                </div>
-              ` : inn1.runs > 0 ? `<div class="result-banner" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2);">TARGET: ${inn1.runs + 1} RUNS</div>` : ''}
-
-              <!-- INNINGS 1 DETAIL -->
-              <div class="innings-section">
-                <div class="innings-header">
-                  <div class="innings-title">1st Innings: ${inn1.battingTeam}</div>
-                  <div class="innings-line"></div>
-                </div>
-                
-                <div class="table-label">BATTING SCORECARD</div>
-                <table>
-                  <thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
-                  <tbody>
-                    ${inn1.players.filter((p: any) => p.ballsFaced > 0 && p.team === (matchData?.team_a === inn1.battingTeam ? 'team1' : 'team2')).map((p: any) => `
-                      <tr><td class="name-cell">${p.name}</td><td class="stat-cell">${p.runsScored}</td><td>${p.ballsFaced}</td><td>${p.fours || 0}</td><td>${p.sixes || 0}</td><td>${strikeRate(p.runsScored, p.ballsFaced)}</td></tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-
-                <div class="table-label">BOWLING SCORECARD</div>
-                <table>
-                  <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>ECON</th></tr></thead>
-                  <tbody>
-                    ${inn1.players.filter((p: any) => p.oversBowled > 0 && p.team === (matchData?.team_a === inn1.bowlingTeam ? 'team1' : 'team2')).map((p: any) => `
-                      <tr><td class="name-cell">${p.name}</td><td class="stat-cell">${Math.floor(p.oversBowled / 6)}.${p.oversBowled % 6}</td><td>${p.maidens || 0}</td><td>${p.runsConceded || 0}</td><td class="stat-cell">${p.wicketsTaken || 0}</td><td>${economyRate(p.runsConceded || 0, p.oversBowled)}</td></tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- INNINGS 2 DETAIL -->
-              ${inn2 ? `
-                <div class="innings-section">
-                  <div class="innings-header">
-                    <div class="innings-title">2nd Innings: ${inn2.battingTeam}</div>
-                    <div class="innings-line"></div>
-                  </div>
-                  
-                  <div class="table-label">BATTING SCORECARD</div>
-                  <table>
-                    <thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
-                    <tbody>
-                      ${inn2.players.filter((p: any) => p.ballsFaced > 0 && p.team === (matchData?.team_a === inn2.battingTeam ? 'team1' : 'team2')).map((p: any) => `
-                        <tr><td class="name-cell">${p.name}</td><td class="stat-cell">${p.runsScored}</td><td>${p.ballsFaced}</td><td>${p.fours || 0}</td><td>${p.sixes || 0}</td><td>${strikeRate(p.runsScored, p.ballsFaced)}</td></tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-
-                  <div class="table-label">BOWLING SCORECARD</div>
-                  <table>
-                    <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>ECON</th></tr></thead>
-                    <tbody>
-                      ${inn2.players.filter((p: any) => p.oversBowled > 0 && p.team === (matchData?.team_a === inn2.bowlingTeam ? 'team1' : 'team2')).map((p: any) => `
-                        <tr><td class="name-cell">${p.name}</td><td class="stat-cell">${Math.floor(p.oversBowled / 6)}.${p.oversBowled % 6}</td><td>${p.maidens || 0}</td><td>${p.runsConceded || 0}</td><td class="stat-cell">${p.wicketsTaken || 0}</td><td>${economyRate(p.runsConceded || 0, p.oversBowled)}</td></tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              ` : ''}
-
-              <div class="footer">
-                GENERATED BY LAZYCRIC ELITE ENGINE • PROFESSIONAL BROADCAST GRADE<br/>
-                <span style="font-size: 10px; opacity: 0.5; margin-top: 8px; display: block;">DIGITAL AUTHENTICITY SECURED</span>
+            <div class="header">
+              <div class="logo-brand">LazyCric Professional Broadcast</div>
+              <div class="match-title">${inn1.battingTeam} VS ${inn2?.battingTeam || inn1.bowlingTeam}</div>
+              <div class="match-meta">
+                ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} • ${matchOvers} OVERS MATCH • OFFICIAL SCORECARD
               </div>
             </div>
+
+            <div class="summary-bar">
+              <div class="summary-item">
+                <div class="summary-label">${inn1.battingTeam}</div>
+                <div class="summary-value">${inn1.runs}/${inn1.wickets} <span style="font-size: 12px; color: #64748b;">(${Math.floor(inn1.balls / 6)}.${inn1.balls % 6})</span></div>
+              </div>
+              ${inn2 ? `
+                <div class="summary-item">
+                  <div class="summary-label">${inn2.battingTeam}</div>
+                  <div class="summary-value">${inn2.runs}/${inn2.wickets} <span style="font-size: 12px; color: #64748b;">(${Math.floor(inn2.balls / 6)}.${inn2.balls % 6})</span></div>
+                </div>
+
+              ` : `
+                <div class="summary-item">
+                  <div class="summary-label">Result</div>
+                  <div class="summary-value winner" style="font-size: 14px;">
+                    ${resultText}
+                  </div>
+                </div>
+              `}
+            </div>
+
+            ${mom ? `
+              <div class="mom-section">
+                <div style="flex: 1;">
+                  <span class="mom-badge">Man of the Match</span>
+                  <h2 class="mom-name">${(mom.name || 'PLAYER').toUpperCase()}</h2>
+                  <div class="mom-stats">
+                    ${mom.runsScored > 0 ? `${mom.runsScored} Runs (${mom.ballsFaced}b)` : ''}
+                    ${mom.runsScored > 0 && mom.wicketsTaken > 0 ? ' • ' : ''}
+                    ${mom.wicketsTaken > 0 ? `${mom.wicketsTaken} Wickets (${Math.floor(mom.oversBowled / 6)}.${mom.oversBowled % 6}ov)` : ''}
+                  </div>
+                </div>
+                <div class="mom-icon">🏆</div>
+              </div>
+            ` : ''}
+
+            <!-- INNINGS 1 -->
+            <div class="innings-card">
+              <div class="innings-header">
+                <div class="innings-title">1st Innings: ${inn1.battingTeam}</div>
+                <div class="innings-score">${inn1.runs}/${inn1.wickets}</div>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40%;">Batsman</th>
+                    <th style="text-align: right;">R</th>
+                    <th style="text-align: right;">B</th>
+                    <th style="text-align: right;">4s</th>
+                    <th style="text-align: right;">6s</th>
+                    <th style="text-align: right;">SR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${inn1.players.filter((p: any) => p.ballsFaced > 0 && p.team === (matchData?.team_a === inn1.battingTeam ? 'team1' : 'team2')).map((p: any) => `
+                    <tr>
+                      <td class="player-name">${p.name}</td>
+                      <td class="stat-val">${p.runsScored}</td>
+                      <td class="stat-muted">${p.ballsFaced}</td>
+                      <td class="stat-muted">${p.fours || 0}</td>
+                      <td class="stat-muted">${p.sixes || 0}</td>
+                      <td class="stat-val">${strikeRate(p.runsScored, p.ballsFaced)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              <div class="extras-row">Extras: ${inn1.extras || 0}</div>
+              
+              <div style="height: 20px; background: #f8fafc;"></div>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 40%;">Bowler</th>
+                    <th style="text-align: right;">O</th>
+                    <th style="text-align: right;">M</th>
+                    <th style="text-align: right;">R</th>
+                    <th style="text-align: right;">W</th>
+                    <th style="text-align: right;">Econ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${inn1.players.filter((p: any) => p.oversBowled > 0 && p.team === (matchData?.team_a === inn1.bowlingTeam ? 'team1' : 'team2')).map((p: any) => `
+                    <tr>
+                      <td class="player-name">${p.name}</td>
+                      <td class="stat-val">${Math.floor(p.oversBowled / 6)}.${p.oversBowled % 6}</td>
+                      <td class="stat-muted">${p.maidens || 0}</td>
+                      <td class="stat-muted">${p.runsConceded || 0}</td>
+                      <td class="stat-val" style="color: #ef4444;">${p.wicketsTaken || 0}</td>
+                      <td class="stat-val">${economyRate(p.runsConceded || 0, p.oversBowled)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+
+              ${inn1.fow && inn1.fow.length > 0 ? `
+                <div class="fow-section">
+                  <div class="fow-title">Fall of Wickets</div>
+                  <div class="fow-list">
+                    ${inn1.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batter}, ${f.overs} ov)`).join(', ')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- INNINGS 2 -->
+            ${inn2 ? `
+              <div class="innings-card">
+                <div class="innings-header">
+                  <div class="innings-title">2nd Innings: ${inn2.battingTeam}</div>
+                  <div class="innings-score">${inn2.runs}/${inn2.wickets}</div>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">Batsman</th>
+                      <th style="text-align: right;">R</th>
+                      <th style="text-align: right;">B</th>
+                      <th style="text-align: right;">4s</th>
+                      <th style="text-align: right;">6s</th>
+                      <th style="text-align: right;">SR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${inn2.players.filter((p: any) => p.ballsFaced > 0 && p.team === (matchData?.team_a === inn2.battingTeam ? 'team1' : 'team2')).map((p: any) => `
+                      <tr>
+                        <td class="player-name">${p.name}</td>
+                        <td class="stat-val">${p.runsScored}</td>
+                        <td class="stat-muted">${p.ballsFaced}</td>
+                        <td class="stat-muted">${p.fours || 0}</td>
+                        <td class="stat-muted">${p.sixes || 0}</td>
+                        <td class="stat-val">${strikeRate(p.runsScored, p.ballsFaced)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                <div class="extras-row">Extras: ${inn2.extras || 0}</div>
+                
+                <div style="height: 20px; background: #f8fafc;"></div>
+                
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">Bowler</th>
+                      <th style="text-align: right;">O</th>
+                      <th style="text-align: right;">M</th>
+                      <th style="text-align: right;">R</th>
+                      <th style="text-align: right;">W</th>
+                      <th style="text-align: right;">Econ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${inn2.players.filter((p: any) => p.oversBowled > 0 && p.team === (matchData?.team_a === inn2.bowlingTeam ? 'team1' : 'team2')).map((p: any) => `
+                      <tr>
+                        <td class="player-name">${p.name}</td>
+                        <td class="stat-val">${Math.floor(p.oversBowled / 6)}.${p.oversBowled % 6}</td>
+                        <td class="stat-muted">${p.maidens || 0}</td>
+                        <td class="stat-muted">${p.runsConceded || 0}</td>
+                        <td class="stat-val" style="color: #ef4444;">${p.wicketsTaken || 0}</td>
+                        <td class="stat-val">${economyRate(p.runsConceded || 0, p.oversBowled)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+
+                ${inn2.fow && inn2.fow.length > 0 ? `
+                  <div class="fow-section">
+                    <div class="fow-title">Fall of Wickets</div>
+                    <div class="fow-list">
+                      ${inn2.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batter}, ${f.overs} ov)`).join(', ')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              REPORT GENERATED BY LAZYCRIC ELITE BROADCAST ENGINE<br/>
+              DIGITAL VERIFICATION: ${Math.random().toString(36).substring(2, 15).toUpperCase()} • ${new Date().getFullYear()}
+            </div>
+            
+            <div class="watermark">LAZYCRIC</div>
           </body>
         </html>
       `;
@@ -945,6 +1112,8 @@ export default function Scoring() {
       if (c.type !== 'wide') {
         nSStats.runs += c.batsmanRuns;
         if (c.countsAsBall) nSStats.balls += 1;
+        if (c.batsmanRuns === 4) nSStats.fours += 1;
+        if (c.batsmanRuns === 6) nSStats.sixes += 1;
       }
 
       // 2. Bowler stats
@@ -1095,53 +1264,63 @@ export default function Scoring() {
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
             <View style={styles.infoCardDot} />
-            <Text style={styles.infoCardTitle}>AT THE CREASE</Text>
-            <TouchableOpacity style={styles.swapChip} onPress={() => setScore(prev => ({ ...prev, striker: prev.nonStriker, nonStriker: prev.striker, strikerStats: prev.nonStrikerStats, nonStrikerStats: prev.strikerStats }))}>
-              <Text style={styles.swapChipText}>SWAP ⇄</Text>
+            <Text style={styles.infoCardTitle}>BATTING UNIT</Text>
+            <TouchableOpacity 
+              style={styles.swapChip} 
+              activeOpacity={0.6}
+              onPress={() => setScore(prev => ({ ...prev, striker: prev.nonStriker, nonStriker: prev.striker, strikerStats: prev.nonStrikerStats, nonStrikerStats: prev.strikerStats }))}
+            >
+              <Text style={styles.swapChipText}>SWAP ENDS ⇄</Text>
             </TouchableOpacity>
           </View>
           {/* Striker */}
           <View style={styles.batsmanRow}>
             <View style={styles.nameBlock}>
-              <Text style={styles.strikerStar}>★</Text>
-              <Text style={styles.batsmanName} numberOfLines={1}>{score.striker?.name || '---'}</Text>
+              <View style={styles.strikerIndicator}>
+                <Text style={styles.strikerStar}>★</Text>
+              </View>
+              <Text style={styles.batsmanName} numberOfLines={1}>{score.striker?.name || 'WAITING...'}</Text>
             </View>
             <View style={styles.batsmanStats}>
               <View style={styles.statPill}><Text style={styles.statPillVal}>{score.strikerStats.runs}</Text><Text style={styles.statPillLbl}>R</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.strikerStats.balls}</Text><Text style={styles.statPillLbl}>B</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.strikerStats.fours}</Text><Text style={styles.statPillLbl}>4s</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.strikerStats.sixes}</Text><Text style={styles.statPillLbl}>6s</Text></View>
+              <View style={styles.statPill}><Text style={styles.statPillMuted}>{strikeRate(score.strikerStats.runs, score.strikerStats.balls)}</Text><Text style={styles.statPillLbl}>SR</Text></View>
             </View>
           </View>
           <View style={styles.rowDivider} />
           {/* Non-Striker */}
           <View style={styles.batsmanRow}>
             <View style={styles.nameBlock}>
-              <Text style={styles.strikerStarMuted}>○</Text>
-              <Text style={[styles.batsmanName, styles.batsmanNameMuted]} numberOfLines={1}>{score.nonStriker?.name || '---'}</Text>
+              <View style={styles.strikerIndicator}>
+                <Text style={styles.strikerStarMuted}>○</Text>
+              </View>
+              <Text style={[styles.batsmanName, styles.batsmanNameMuted]} numberOfLines={1}>{score.nonStriker?.name || 'WAITING...'}</Text>
             </View>
             <View style={styles.batsmanStats}>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.nonStrikerStats.runs}</Text><Text style={styles.statPillLbl}>R</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.nonStrikerStats.balls}</Text><Text style={styles.statPillLbl}>B</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.nonStrikerStats.fours}</Text><Text style={styles.statPillLbl}>4s</Text></View>
               <View style={styles.statPill}><Text style={styles.statPillMuted}>{score.nonStrikerStats.sixes}</Text><Text style={styles.statPillLbl}>6s</Text></View>
+              <View style={styles.statPill}><Text style={styles.statPillMuted}>{strikeRate(score.nonStrikerStats.runs, score.nonStrikerStats.balls)}</Text><Text style={styles.statPillLbl}>SR</Text></View>
             </View>
           </View>
         </View>
 
-        {/* ── Action Bar: Bowler + This Over (Integrated Row) ── */}
+        {/* ── Action Card: Bowler + This Over (Integrated Row) ── */}
         <View style={styles.actionCard}>
           <View style={styles.actionRow}>
             {/* Bowler Side */}
             <View style={styles.bowlerBlock}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-                <Text style={{ fontSize: 9 }}>🏏</Text>
+              <View style={styles.actionHeaderRow}>
+                <Ionicons name="fitness" size={10} color={theme.colors.accent} />
                 <Text style={styles.actionLabel}>BOWLER</Text>
               </View>
               
               {score.bowler ? (
                 <View style={styles.bowlerMain}>
-                  <Text style={styles.bowlerNameAction} numberOfLines={1}>{score.bowler.name.toUpperCase()}</Text>
+                  <Text style={styles.bowlerNameAction} numberOfLines={1}>{(score.bowler.name || 'BOWLER').toUpperCase()}</Text>
                   <View style={styles.bowlerMiniStats}>
                     <View style={styles.bStatItem}><Text style={styles.bStatLabel}>O</Text><Text style={styles.bMiniVal}>{Math.floor(score.bowlerStats.balls/6)}.{score.bowlerStats.balls%6}</Text></View>
                     <View style={styles.bStatItem}><Text style={styles.bStatLabel}>R</Text><Text style={styles.bMiniVal}>{score.bowlerStats.runs}</Text></View>
@@ -1149,10 +1328,10 @@ export default function Scoring() {
                   </View>
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => setModals(m => ({ ...m, bowler: true }))} style={styles.bowlerAssignAction}>
-                  <View style={[styles.assignInner, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                    <Text style={styles.bowlerAssignText}>⊕ CHOOSE</Text>
-                  </View>
+                <TouchableOpacity onPress={() => setModals(m => ({ ...m, bowler: true }))} style={styles.bowlerAssignAction} activeOpacity={0.8}>
+                  <LinearGradient colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']} style={styles.assignInner}>
+                    <Text style={styles.bowlerAssignText}>⊕ ASSIGN</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               )}
             </View>
@@ -1162,8 +1341,8 @@ export default function Scoring() {
             {/* Over Side */}
             <View style={styles.overBlock}>
               <View style={styles.overHeaderAction}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={{ fontSize: 9 }}>📊</Text>
+                <View style={styles.actionHeaderRow}>
+                  <Ionicons name="analytics" size={10} color={theme.colors.accent} />
                   <Text style={styles.actionLabel}>THIS OVER</Text>
                 </View>
                 <View style={styles.overBadge}>
@@ -1393,118 +1572,123 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingBottom: 20,
   },
   infoPanel: {
-    paddingHorizontal: 12,
-    paddingBottom: 2,
-    gap: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
   },
 
   // ─── Info Card (shared card style) ───
   infoCard: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 14,
-    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
   infoCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
-    gap: 6,
+    marginBottom: 12,
+    gap: 8,
   },
   infoCardDot: {
-    width: 5, height: 5, borderRadius: 2.5,
+    width: 6, height: 6, borderRadius: 3,
     backgroundColor: theme.colors.accent,
   },
   infoCardTitle: {
     flex: 1,
-    fontSize: 8,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.2)',
-    letterSpacing: 1.5,
+    fontSize: 9,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
 
   // ─── Swap chip ───
   swapChip: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  swapChipText: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 0.5 },
+  swapChipText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 0.5 },
 
   // ─── Batsmen rows ───
   batsmanRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
-  nameBlock: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
-  strikerStar: { fontSize: 12, color: '#FBBF24', width: 12, textAlign: 'center' },
-  strikerStarMuted: { fontSize: 10, color: 'rgba(255,255,255,0.1)', width: 12, textAlign: 'center' },
-  batsmanName: { color: '#FFF', fontSize: 14, fontWeight: '800', letterSpacing: -0.2 },
-  batsmanNameMuted: { color: 'rgba(255,255,255,0.25)', fontWeight: '700' },
-  batsmanStats: { flexDirection: 'row', gap: 6 },
-  statPill: { alignItems: 'center', minWidth: 26 },
-  statPillVal: { fontSize: 15, fontWeight: '900', color: '#FFF', lineHeight: 18 },
-  statPillMuted: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.25)', lineHeight: 18 },
-  statPillLbl: { fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.15)', letterSpacing: 0.5 },
-  rowDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.03)', marginVertical: 3 },
+  nameBlock: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 },
+  strikerIndicator: { width: 20, alignItems: 'center' },
+  strikerStar: { fontSize: 14, color: '#FBBF24' },
+  strikerStarMuted: { fontSize: 12, color: 'rgba(255,255,255,0.1)' },
+  batsmanName: { color: '#FFF', fontSize: 18, fontFamily: theme.typography.fontFamily.bold, letterSpacing: -0.3 },
+  batsmanNameMuted: { color: 'rgba(255,255,255,0.4)', fontFamily: theme.typography.fontFamily.semiBold },
+  batsmanStats: { flexDirection: 'row', gap: 12 },
+  statPill: { alignItems: 'flex-end', minWidth: 32 },
+  statPillVal: { fontSize: 18, fontFamily: theme.typography.fontFamily.manrope, color: '#FFF', fontWeight: '800' },
+  statPillMuted: { fontSize: 16, fontFamily: theme.typography.fontFamily.manrope, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
+  statPillLbl: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.2)', letterSpacing: 1, marginTop: 1 },
+  rowDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginVertical: 8 },
 
   // ─── Partnership & Required Strip ───
   partnershipStripPro: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: 'rgba(0,0,0,0.15)',
-    padding: 8,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.02)',
+    borderColor: 'rgba(255,255,255,0.03)',
   },
   pStat: { flex: 1, alignItems: 'center' },
-  pLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.15)', letterSpacing: 1, marginBottom: 2 },
-  pVal: { fontSize: 14, fontWeight: '900', color: '#FFF' },
-  pSub: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.25)' },
+  pLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.15)', letterSpacing: 1, marginBottom: 4 },
+  pVal: { fontSize: 16, fontWeight: '900', color: '#FFF' },
+  pSub: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.25)' },
 
   // ─── Action Card (Integrated Bowler + Over) ───
   actionCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    marginVertical: 2,
-    minHeight: 80,
+    marginVertical: 4,
   },
   actionRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  bowlerBlock: { flex: 1.1, paddingRight: 10 },
-  actionLabel: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 1, marginBottom: 4, textTransform: 'uppercase' },
-  bowlerMain: { gap: 2 },
-  bowlerNameAction: { fontSize: 14, fontWeight: '900', color: '#FFF' },
-  bowlerMiniStats: { flexDirection: 'row', gap: 8, marginTop: 2 },
-  bStatItem: { alignItems: 'center', gap: 1 },
-  bStatLabel: { fontSize: 6, fontWeight: '800', color: 'rgba(255,255,255,0.4)' },
-  bMiniVal: { fontSize: 12, fontWeight: '900', color: '#FFF' },
-  bowlerAssignAction: { height: 36, borderRadius: 10, overflow: 'hidden', width: '100%' },
+  bowlerBlock: { flex: 1.2, paddingRight: 12 },
+  actionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  actionLabel: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 1.5, textTransform: 'uppercase' },
+  bowlerMain: { gap: 4 },
+  bowlerNameAction: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.2 },
+  bowlerMiniStats: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  bStatItem: { alignItems: 'flex-start', gap: 1 },
+  bStatLabel: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' },
+  bMiniVal: { fontSize: 14, fontFamily: theme.typography.fontFamily.manrope, color: '#FFF', fontWeight: '700' },
+  bowlerAssignAction: { height: 44, borderRadius: 12, overflow: 'hidden', width: '100%' },
   assignInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  bowlerAssignText: { fontSize: 10, fontWeight: '900', color: theme.colors.accent },
-  vActionDivider: { width: 1, height: '60%', backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 4 },
-  overBlock: { flex: 2, paddingLeft: 10 },
-  overHeaderAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  overBadge: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  overFraction: { fontSize: 10, fontWeight: '900', color: theme.colors.accent },
-  overBallsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  overBallPro: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  overBallTextPro: { fontSize: 11, fontWeight: '900', color: '#FFF' },
+  bowlerAssignText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 1 },
+  vActionDivider: { width: 1, height: '70%', backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 8 },
+  overBlock: { flex: 2, paddingLeft: 12 },
+  overHeaderAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  overBadge: { backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  overFraction: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent },
+  overBallsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  overBallPro: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  overBallTextPro: { fontSize: 12, fontFamily: theme.typography.fontFamily.bold, color: '#FFF' },
 
   // ─── Fixed control panel at bottom ───
   controlPanel: {
     paddingBottom: 80, 
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.92)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.03)',
-    paddingTop: 4,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: 8,
   },
 });

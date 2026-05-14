@@ -83,9 +83,9 @@ export const localDb = {
     
     if (index >= 0) {
       const p = players[index];
-      p.runs = (p.runs || 0) + (playerData.runs || 0);
-      p.wickets = (p.wickets || 0) + (playerData.wickets || 0);
-      p.balls = (p.balls || 0) + (playerData.balls || 0);
+      p.runs = (p.runs || 0) + (playerData.runsScored || 0);
+      p.wickets = (p.wickets || 0) + (playerData.wicketsTaken || 0);
+      p.balls = (p.balls || 0) + (playerData.ballsFaced || 0);
       p.matches = (p.matches || 0) + 1;
       p.fours = (p.fours || 0) + (playerData.fours || 0);
       p.sixes = (p.sixes || 0) + (playerData.sixes || 0);
@@ -94,15 +94,21 @@ export const localDb = {
       players.push({
         id: `player_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         name: playerData.name,
-        runs: playerData.runs || 0,
-        wickets: playerData.wickets || 0,
-        balls: playerData.balls || 0,
+        runs: playerData.runsScored || 0,
+        wickets: playerData.wicketsTaken || 0,
+        balls: playerData.ballsFaced || 0,
         matches: 1,
         fours: playerData.fours || 0,
         sixes: playerData.sixes || 0,
       });
     }
     await safeSet(PLAYERS_KEY, JSON.stringify(players));
+  },
+
+  deletePlayer: async (id: string) => {
+    const players = await localDb.getPlayers();
+    const filtered = players.filter((p: any) => p.id !== id);
+    await safeSet(PLAYERS_KEY, JSON.stringify(filtered));
   },
 
   getTournaments: async () => {

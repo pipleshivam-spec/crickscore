@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { localDb } from '../src/lib/localDb';
 import { useAppTheme } from '../src/theme/ThemeContext';
 import { router } from 'expo-router';
 import { BottomNavBar } from '../src/components/BottomNavBar';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
 export default function Tournaments() {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newTournament, setNewTournament] = useState({ name: '', overs: '20', teams: '' });
+  const [tournaments, setTournaments] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [newTournament, setNewTournament] = React.useState({ name: '', overs: '20', teams: '' });
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadTournaments();
   }, []);
 
@@ -80,44 +82,57 @@ export default function Tournaments() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           {tournaments.length > 0 ? (
-            tournaments.map((tour) => (
-              <TouchableOpacity 
+            tournaments.map((tour, idx) => (
+              <Animated.View 
                 key={tour.id} 
-                style={styles.tourCard}
-                onPress={() => router.push({ pathname: '/tournament-details', params: { id: tour.id } })}
+                entering={FadeInDown.delay(idx * 100).duration(600)}
               >
-                <LinearGradient 
-                  colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)']} 
-                  style={styles.cardInner}
+                <TouchableOpacity 
+                  style={styles.tourCard}
+                  onPress={() => router.push({ pathname: '/tournament-details', params: { id: tour.id } })}
+                  activeOpacity={0.9}
                 >
-                  <View style={styles.cardHeader}>
-                    <View style={styles.statusBadge}>
-                      <View style={[styles.statusDot, { backgroundColor: tour.status === 'active' ? '#10B981' : '#64748b' }]} />
-                      <Text style={styles.statusText}>{tour.status.toUpperCase()}</Text>
+                  <LinearGradient 
+                    colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']} 
+                    style={styles.cardInner}
+                  >
+                    <View style={styles.cardHeader}>
+                      <View style={styles.statusBadge}>
+                        <View style={[styles.statusDot, { backgroundColor: tour.status === 'active' ? '#10B981' : '#64748b' }]} />
+                        <Text style={styles.statusText}>{(tour.status || 'ACTIVE').toUpperCase()}</Text>
+                      </View>
+                      <View style={styles.dateBadge}>
+                        <Ionicons name="calendar-outline" size={10} color="rgba(255,255,255,0.2)" />
+                        <Text style={styles.dateText}>{new Date(tour.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</Text>
+                      </View>
                     </View>
-                    <Text style={styles.dateText}>{new Date(tour.created_at).toLocaleDateString()}</Text>
-                  </View>
-                  
-                  <Text style={styles.tourName}>{tour.name.toUpperCase()}</Text>
-                  
-                  <View style={styles.tourMeta}>
-                    <View style={styles.metaItem}>
-                      <Text style={styles.metaVal}>{tour.teams.length}</Text>
-                      <Text style={styles.metaLab}>TEAMS</Text>
+                    
+                    <Text style={styles.tourName}>{(tour.name || 'LEAGUE').toUpperCase()}</Text>
+                    
+                    <View style={styles.tourMeta}>
+                      <View style={styles.metaItem}>
+                        <Text style={styles.metaVal}>{tour.teams.length}</Text>
+                        <Text style={styles.metaLab}>SQUADS</Text>
+                      </View>
+                      <View style={styles.vDivider} />
+                      <View style={styles.metaItem}>
+                        <Text style={styles.metaVal}>{tour.overs}</Text>
+                        <Text style={styles.metaLab}>OVERS</Text>
+                      </View>
+                      <View style={styles.vDivider} />
+                      <View style={styles.metaItem}>
+                        <Text style={styles.metaVal}>{tour.matches?.length || 0}</Text>
+                        <Text style={styles.metaLab}>SESSION</Text>
+                      </View>
                     </View>
-                    <View style={styles.vDivider} />
-                    <View style={styles.metaItem}>
-                      <Text style={styles.metaVal}>{tour.overs}</Text>
-                      <Text style={styles.metaLab}>OVERS</Text>
+
+                    <View style={styles.cardFooterPro}>
+                      <Text style={styles.footerTextPro}>MANAGED BY LAZYCRIC ELITE ENGINE</Text>
+                      <Ionicons name="chevron-forward" size={12} color={theme.colors.accent} />
                     </View>
-                    <View style={styles.vDivider} />
-                    <View style={styles.metaItem}>
-                      <Text style={styles.metaVal}>{tour.matches?.length || 0}</Text>
-                      <Text style={styles.metaLab}>MATCHES</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
             ))
           ) : (
             <View style={styles.emptyBox}>
@@ -205,19 +220,22 @@ const createStyles = (theme: any) => StyleSheet.create({
   addBtnText: { color: '#000', fontSize: 10, fontWeight: '900' },
   scroll: { paddingHorizontal: 24, paddingBottom: 120 },
 
-  tourCard: { marginBottom: 20, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  tourCard: { marginBottom: 20, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   cardInner: { padding: 24 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.03)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
-  dateText: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.2)' },
+  statusText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.6)', letterSpacing: 1 },
+  dateBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.02)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  dateText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 },
   tourName: { fontSize: 20, fontWeight: '900', color: '#FFF', letterSpacing: -0.5, marginBottom: 20 },
-  tourMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 16 },
+  tourMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   metaItem: { alignItems: 'center', flex: 1 },
   metaVal: { fontSize: 18, fontWeight: '900', color: theme.colors.accent },
-  metaLab: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 1, marginTop: 4 },
-  vDivider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.05)' },
+  metaLab: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1, marginTop: 4 },
+  vDivider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' },
+  cardFooterPro: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  footerTextPro: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5 },
 
   emptyBox: { marginTop: 60, alignItems: 'center', padding: 40, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
   emptyIcon: { fontSize: 48, marginBottom: 24, opacity: 0.2 },

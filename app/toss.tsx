@@ -130,7 +130,7 @@ export default function Toss() {
             {tossResult && !isFlipping && (
               <View style={styles.resultBox}>
                 <Text style={styles.winnerLabel}>TOSS WINNER</Text>
-                <Text style={styles.winnerName}>{tossResult.winner.toUpperCase()}</Text>
+                <Text style={styles.winnerName}>{(tossResult.winner || 'TEAM').toUpperCase()}</Text>
                 
                 <View style={styles.decisionGroup}>
                   <Text style={styles.decisionPrompt}>SELECT DECISION</Text>
@@ -189,16 +189,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  matchTeams: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '800', letterSpacing: 1 },
-  actionSection: { width: '100%', marginBottom: 20 },
-  flipBtn: { height: 70, borderRadius: 24, overflow: 'hidden', ...theme.shadows.glow },
+  matchTeams: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: '600' },
+  actionSection: { minHeight: 250, justifyContent: 'center' },
+  flipBtn: { height: 60, borderRadius: 30, overflow: 'hidden' },
   btnInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: theme.colors.background, fontSize: 18, fontWeight: '900', letterSpacing: 2 },
-  resultBox: { alignItems: 'center', width: '100%' },
-  winnerLabel: { fontSize: 10, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2 },
-  winnerName: { fontSize: 28, fontWeight: '900', color: theme.colors.success, marginTop: 8, textAlign: 'center' },
-  decisionGroup: { marginTop: 40, width: '100%' },
-  decisionPrompt: { fontSize: 9, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2, marginBottom: 20, textAlign: 'center' },
+  btnText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  resultBox: { alignItems: 'center' },
+  winnerLabel: { color: theme.colors.textSecondary, fontSize: 12, letterSpacing: 2 },
+  winnerName: { color: theme.colors.text, fontSize: 24, fontWeight: '900', marginVertical: 8 },
+  decisionGroup: { marginTop: 24, width: '100%' },
+  decisionPrompt: { color: theme.colors.textSecondary, fontSize: 10, textAlign: 'center', marginBottom: 16, letterSpacing: 2 },
   choiceRow: { flexDirection: 'row', gap: 16 },
   choiceBtn: { flex: 1, height: 100, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   choiceInner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },

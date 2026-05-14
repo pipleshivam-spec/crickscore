@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -14,19 +14,20 @@ export default function MatchSetup() {
   const styles = createStyles(theme);
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
 
-  const [step, setStep] = useState(1);
-  const [team1Name, setTeam1Name] = useState('Team A');
-  const [team2Name, setTeam2Name] = useState('Team B');
-  const [overs, setOvers] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [matchType, setMatchType] = useState('T20');
-  const [pitch, setPitch] = useState('HARD');
-  const [ball, setBall] = useState('LEATHER');
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState<any>(null);
+  const [step, setStep] = React.useState(1);
+  const [team1Name, setTeam1Name] = React.useState('Team A');
+  const [team2Name, setTeam2Name] = React.useState('Team B');
+  const [overs, setOvers] = React.useState(10);
+  const [loading, setLoading] = React.useState(false);
+  const [matchType, setMatchType] = React.useState('T20');
+  const [pitch, setPitch] = React.useState('HARD');
+  const [ball, setBall] = React.useState('LEATHER');
+  const [tournaments, setTournaments] = React.useState<any[]>([]);
+  const [selectedTournament, setSelectedTournament] = React.useState<any>(null);
+  const [matchId] = React.useState(() => `match_${Date.now()}`);
   const { tournamentId } = useLocalSearchParams<{ tournamentId: string }>();
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadTournaments();
   }, []);
 
@@ -37,7 +38,6 @@ export default function MatchSetup() {
       const tour = data.find((t: any) => t.id === tournamentId);
       if (tour) {
         setSelectedTournament(tour);
-        // If tournament is selected, maybe pre-fill some settings?
         setOvers(tour.overs || 20);
       }
     }
@@ -46,6 +46,19 @@ export default function MatchSetup() {
   const progress = (step / 3) * 100;
 
   const handleProceed = async () => {
+    if (step === 1) {
+      if (!team1Name.trim() || !team2Name.trim()) {
+        Alert.alert('REQUIRED FIELDS', 'Please enter names for both Home and Away squads.');
+        return;
+      }
+      if (team1Name.trim().toUpperCase() === team2Name.trim().toUpperCase()) {
+        Alert.alert('INVALID SQUADS', 'Home and Away squads cannot have the same name.');
+        return;
+      }
+      setStep(2);
+      return;
+    }
+    
     if (step < 3) {
       setStep(step + 1);
       return;
@@ -53,13 +66,12 @@ export default function MatchSetup() {
 
     try {
       setLoading(true);
-      const matchId = `match_${Date.now()}`;
       const newMatch = {
         id: matchId,
-        team_a: team1Name,
-        team_b: team2Name,
-        teamA: team1Name,
-        teamB: team2Name,
+        team_a: team1Name.trim(),
+        team_b: team2Name.trim(),
+        teamA: team1Name.trim(),
+        teamB: team2Name.trim(),
         overs: overs,
         matchType,
         pitch,
@@ -74,14 +86,13 @@ export default function MatchSetup() {
 
       await localDb.saveMatch(newMatch);
 
-      // If linked to a tournament, add this match to the tournament's match list
       if (selectedTournament) {
         const updatedTournament = {
           ...selectedTournament,
           matches: [...(selectedTournament.matches || []), {
             id: matchId,
-            teamA: team1Name,
-            teamB: team2Name,
+            teamA: team1Name.trim(),
+            teamB: team2Name.trim(),
             date: new Date().toISOString(),
             status: 'live',
             result: null,
@@ -92,7 +103,7 @@ export default function MatchSetup() {
 
       router.push({
         pathname: '/toss',
-        params: { matchId, team1Name, team2Name }
+        params: { matchId, team1Name: team1Name.trim(), team2Name: team2Name.trim() }
       });
 
     } catch (err: any) {
@@ -132,7 +143,6 @@ export default function MatchSetup() {
             <Text style={styles.sectionTitle}>SQUAD INITIALIZATION</Text>
 
             <View style={styles.squadInputsCompact}>
-              {/* Team A */}
               <View style={styles.slimInputCard}>
                 <View style={styles.inputLabelRow}>
                   <View style={styles.statusDot} />
@@ -142,14 +152,13 @@ export default function MatchSetup() {
                   style={styles.slimInput}
                   value={team1Name}
                   onChangeText={setTeam1Name}
-                  placeholder="TEAM A"
+                  placeholder="ENTER HOME SQUAD"
                   placeholderTextColor="rgba(255,255,255,0.1)"
                   selectionColor={theme.colors.accent}
                   autoCapitalize="characters"
                 />
               </View>
 
-              {/* VS Divider */}
               <View style={styles.vsCompactRow}>
                 <View style={styles.vsLinePro} />
                 <View style={styles.vsChipPro}>
@@ -158,7 +167,6 @@ export default function MatchSetup() {
                 <View style={styles.vsLinePro} />
               </View>
 
-              {/* Team B */}
               <View style={styles.slimInputCard}>
                 <View style={styles.inputLabelRow}>
                   <View style={[styles.statusDot, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
@@ -168,7 +176,7 @@ export default function MatchSetup() {
                   style={styles.slimInput}
                   value={team2Name}
                   onChangeText={setTeam2Name}
-                  placeholder="TEAM B"
+                  placeholder="ENTER AWAY SQUAD"
                   placeholderTextColor="rgba(255,255,255,0.1)"
                   selectionColor={theme.colors.accent}
                   autoCapitalize="characters"
@@ -252,7 +260,7 @@ export default function MatchSetup() {
                 <View style={styles.ticketHeader}>
                   <View>
                     <Text style={styles.ticketBranding}>LAZYCRIC PRO</Text>
-                    <Text style={styles.ticketMatchId}>ELITE-NODE-{Math.floor(Math.random() * 10000)}</Text>
+                    <Text style={styles.ticketMatchId}>SID-{matchId.split('_')[1] || 'LIVE'}</Text>
                   </View>
                   <View style={styles.broadcastBadge}>
                     <View style={styles.broadcastDot} />
@@ -262,14 +270,14 @@ export default function MatchSetup() {
 
                 <View style={styles.ticketMain}>
                   <View style={styles.ticketTeamBox}>
-                    <Text style={styles.ticketTeamName}>{team1Name.toUpperCase()}</Text>
+                    <Text style={styles.ticketTeamName}>{(team1Name || 'TEAM A').toUpperCase()}</Text>
                     <Text style={styles.ticketTeamRole}>HOME</Text>
                   </View>
                   <View style={styles.ticketVSBox}>
                     <Text style={styles.ticketVSText}>VS</Text>
                   </View>
                   <View style={styles.ticketTeamBox}>
-                    <Text style={[styles.ticketTeamName, { textAlign: 'right' }]}>{team2Name.toUpperCase()}</Text>
+                    <Text style={[styles.ticketTeamName, { textAlign: 'right' }]}>{(team2Name || 'TEAM B').toUpperCase()}</Text>
                     <Text style={[styles.ticketTeamRole, { textAlign: 'right' }]}>AWAY</Text>
                   </View>
                 </View>
@@ -312,8 +320,6 @@ export default function MatchSetup() {
 
   return (
     <View style={styles.container}>
-      {/* Global ProfessionalBackground provides the depth here */}
-
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -379,7 +385,7 @@ export default function MatchSetup() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: '#000' },
   safeArea: { flex: 1 },
   content: { flex: 1 },
   header: { padding: 24, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
@@ -398,7 +404,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   sectionTitle: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 3, marginBottom: 4, textTransform: 'uppercase' },
 
   tourSelector: { flexDirection: 'row', marginBottom: 12 },
-  tourChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  tourChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   tourChipActive: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: theme.colors.accent },
   tourChipText: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
   tourChipTextActive: { color: theme.colors.accent },
@@ -409,14 +415,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   slimLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5 },
   slimInput: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
   vsCompactRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
   vsLinePro: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.03)' },
-  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginHorizontal: 16 },
+  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', marginHorizontal: 16 },
   vsTextPro: { fontSize: 10, fontWeight: '900', color: theme.colors.accent, letterSpacing: 1.5 },
 
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent },
@@ -425,7 +431,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   eliteGrid: { flexDirection: 'row', gap: 10 },
   eliteChip: { flex: 1, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' },
   eliteChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  eliteChipText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
+  eliteChipText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.5)', letterSpacing: 1 },
   eliteChipTextActive: { color: '#000' },
   activeIndicator: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: '#000' },
 
@@ -434,7 +440,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   overBoxActive: { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: theme.colors.accent, borderWidth: 2 },
   overValElite: { fontSize: 18, fontWeight: '900', color: '#FFF' },
   overValActive: { color: theme.colors.accent },
-  overSubElite: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.15)', letterSpacing: 1 },
+  overSubElite: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
   overSubActive: { color: theme.colors.accent },
 
   conditionRow: { flexDirection: 'row', gap: 12 },
@@ -443,7 +449,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
   pillActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  pillText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.25)' },
+  pillText: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.5)' },
   pillTextActive: { color: '#000' },
 
   ticketCard: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.01)' },
@@ -459,9 +465,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   ticketTeamName: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.5 },
   ticketTeamRole: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginTop: 2, letterSpacing: 1, textTransform: 'uppercase' },
   ticketVSBox: { width: 40, alignItems: 'center' },
-  ticketVSText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.03)' },
+  ticketVSText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)' },
   ticketDividerRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -32, marginBottom: 32 },
-  ticketCut: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#020617', marginLeft: -10 },
+  ticketCut: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#000', marginLeft: -10 },
   ticketCutRight: { marginLeft: 0, marginRight: -10 },
   ticketDash: { flex: 1, height: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', borderStyle: 'dashed' },
   ticketFooter: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -486,10 +492,10 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.04)',
   },
   hintText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.2)',
+    color: 'rgba(255,255,255,0.4)',
     letterSpacing: 0.5,
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });

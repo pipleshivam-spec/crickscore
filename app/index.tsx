@@ -31,6 +31,19 @@ export default function Home() {
 
   const checkActiveSession = async () => {
     try {
+      // 1. Check Local Storage First (Priority for Offline Scorer)
+      const localMatches = await localDb.getMatches();
+      const localActive = localMatches.find((m: any) => m.status === 'live');
+      
+      if (localActive) {
+        setActiveSession({
+          id: 'local',
+          matches: [localActive]
+        });
+        return;
+      }
+
+      // 2. Fallback to Supabase Remote Session
       const { data } = await supabase
         .from('sessions')
         .select('*, matches(*, innings(*))')
@@ -55,11 +68,12 @@ export default function Home() {
     const target = item || activeSession?.matches?.[0];
     if (!target) return;
 
-    if (target.isLocal) {
-      const activeInnings = target.innings?.find((i: any) => i.status === 'active') || target.innings[0];
+    if (activeSession?.id === 'local' || target.isLocal) {
+      const activeInnings = target.innings?.find((i: any) => i.status === 'active') || (target.innings && target.innings[0]);
+      const innId = activeInnings?.id || `${target.id}_inn1`;
       router.push({ 
         pathname: '/scoring', 
-        params: { matchId: target.id, inningsId: activeInnings?.id, isLocal: 'true' } 
+        params: { matchId: target.id, inningsId: innId, isLocal: 'true' } 
       });
       return;
     }
@@ -133,7 +147,7 @@ export default function Home() {
                     <View style={styles.matchInfo}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.teamsText} numberOfLines={1}>
-                          {activeSession.matches?.[0]?.team_a} vs {activeSession.matches?.[0]?.team_b}
+                          {(activeSession.matches?.[0]?.teamA || activeSession.matches?.[0]?.team_a)} vs {(activeSession.matches?.[0]?.teamB || activeSession.matches?.[0]?.team_b)}
                         </Text>
                         <Text style={styles.liveScoreMini}>
                           {activeSession.matches?.[0]?.innings?.[0]?.total_runs || 0}/{activeSession.matches?.[0]?.innings?.[0]?.total_wickets || 0}
@@ -257,7 +271,7 @@ export default function Home() {
 
 const createStyles = (theme: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  glowBall: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.2, filter: 'blur(60px)' },
+  glowBall: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.15 },
   safeArea: { flex: 1, paddingTop: 10 },
   scroll: { flexGrow: 1 },
   content: { paddingHorizontal: 20, paddingVertical: 24, paddingBottom: 120 },
@@ -275,10 +289,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   logoImage: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   titleWrapper: {
     justifyContent: 'center',
@@ -300,12 +314,12 @@ const createStyles = (theme: any) => StyleSheet.create({
   profileBtn: { 
     width: 44, 
     height: 44, 
-    borderRadius: 15, 
-    backgroundColor: 'rgba(255,255,255,0.02)', 
+    borderRadius: 16, 
+    backgroundColor: 'rgba(255,255,255,0.03)', 
     alignItems: 'center', 
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   profileEmoji: { fontSize: 16 },
   mainHub: { marginBottom: 32 },
@@ -393,7 +407,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.accent,
     marginTop: 2,
   },
-  emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   statsBento: {
     flexDirection: 'row',
@@ -468,8 +482,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
 
   footer: { alignItems: 'center', paddingBottom: 40 },
-  footerText: { fontSize: 8, color: 'rgba(255,255,255,0.2)', fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
-  footerSub: { fontSize: 6, color: theme.colors.accent, opacity: 0.2, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 4, marginTop: 4 },
+  footerText: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
+  footerSub: { fontSize: 8, color: theme.colors.accent, opacity: 0.4, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 3, marginTop: 4 },
   resetBtn: {
     marginTop: 24,
     paddingHorizontal: 16,

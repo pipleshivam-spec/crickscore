@@ -211,7 +211,7 @@ export default function LocalSetup() {
                   <View style={styles.resultArea}>
                     <View style={styles.winnerCard}>
                       <Text style={styles.resultLabel}>TOSS WINNER</Text>
-                      <Text style={styles.winnerName}>{tossWinner.toUpperCase()}</Text>
+                      <Text style={styles.winnerName}>{(tossWinner || 'TEAM').toUpperCase()}</Text>
                     </View>
                     
                     <Text style={styles.choiceLabel}>DECISION PROTOCOL</Text>

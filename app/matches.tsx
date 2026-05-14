@@ -83,7 +83,7 @@ export default function MatchesHistory() {
             
             <View style={styles.teamsSection}>
               <View style={styles.teamEntry}>
-                <Text style={styles.teamName} numberOfLines={1}>{m.team_a.toUpperCase()}</Text>
+                <Text style={styles.teamName} numberOfLines={1}>{(m.team_a || 'TEAM A').toUpperCase()}</Text>
                 <Text style={styles.teamScore}>
                   {m.innings?.[0]?.total_runs ?? 0}/{m.innings?.[0]?.total_wickets ?? 0}
                 </Text>
@@ -94,7 +94,7 @@ export default function MatchesHistory() {
               </View>
 
               <View style={[styles.teamEntry, { alignItems: 'flex-end' }]}>
-                <Text style={[styles.teamName, { textAlign: 'right' }]} numberOfLines={1}>{m.team_b.toUpperCase()}</Text>
+                <Text style={[styles.teamName, { textAlign: 'right' }]} numberOfLines={1}>{(m.team_b || 'TEAM B').toUpperCase()}</Text>
                 <Text style={styles.teamScore}>
                   {m.innings?.[1]?.total_runs ?? 0}/{m.innings?.[1]?.total_wickets ?? 0}
                 </Text>
@@ -265,25 +265,25 @@ const createStyles = (theme: any) => StyleSheet.create({
   teamsSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   teamEntry: { flex: 1 },
   teamName: { 
-    fontSize: 15, 
-    fontFamily: theme.typography.fontFamily.bold, 
-    color: '#FFF', 
-    letterSpacing: -0.3
-  },
-  teamScore: { 
     fontSize: 18, 
     fontFamily: theme.typography.fontFamily.bold, 
+    color: '#FFF', 
+    letterSpacing: -0.5
+  },
+  teamScore: { 
+    fontSize: 22, 
+    fontFamily: theme.typography.fontFamily.bold, 
     color: theme.colors.accent, 
-    marginTop: 4 
+    marginTop: 6 
   },
   vsCircle: { 
     width: 32, height: 32, borderRadius: 16, 
-    backgroundColor: 'rgba(255,255,255,0.03)', 
+    backgroundColor: 'rgba(255,255,255,0.05)', 
     alignItems: 'center', justifyContent: 'center', 
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', 
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', 
     marginHorizontal: 16 
   },
-  vsText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.1)' },
+  vsText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)' },
   
   cardFooter: { 
     flexDirection: 'row', 
@@ -296,19 +296,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   metaLabel: { 
     fontSize: 8, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.15)', 
+    color: 'rgba(255,255,255,0.3)', 
     letterSpacing: 1 
   },
   metaVal: { 
     fontSize: 10, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.4)', 
+    color: 'rgba(255,255,255,0.6)', 
   },
   miniDelete: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(239, 68, 68, 0.03)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.05)' },
   miniDeleteText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 0.5 },
   emptyBox: { marginTop: 40, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
   emptyInner: { padding: 48, alignItems: 'center' },
   emptyIcon: { fontSize: 40, marginBottom: 16, opacity: 0.3 },
-  emptyText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 2 },
-  emptySub: { color: 'rgba(255,255,255,0.15)', fontSize: 9, fontWeight: '700', marginTop: 12, textAlign: 'center', lineHeight: 16 },
+  emptyText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 2, opacity: 0.8 },
+  emptySub: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '700', marginTop: 12, textAlign: 'center', lineHeight: 18 },
 });

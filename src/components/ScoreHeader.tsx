@@ -24,7 +24,6 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
   
-  // Glimmer Animation
   const glimmerAnim = React.useRef(new Animated.Value(-1)).current;
 
   React.useEffect(() => {
@@ -32,11 +31,11 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
       glimmerAnim.setValue(-1);
       Animated.timing(glimmerAnim, {
         toValue: 2,
-        duration: 3000,
+        duration: 3500,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }).start(() => {
-        setTimeout(runAnimation, 2000);
+        setTimeout(runAnimation, 2500);
       });
     };
     runAnimation();
@@ -56,33 +55,19 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
   let rrr = '0.00';
   let ballsLeft = 0;
   let runsNeeded = 0;
-  let winProb = 50;
-  let projectedScore = 0;
 
   if (target) {
     ballsLeft = (totalOvers * 6) - balls;
     runsNeeded = target - runs;
     rrr = ballsLeft > 0 ? (runsNeeded / (ballsLeft / 6)).toFixed(2) : '0.00';
-    
-    // Win Prob calculation (Simple broadcast logic)
-    const currentRate = parseFloat(crr);
-    const requiredRate = parseFloat(rrr);
-    if (requiredRate <= 0) winProb = 100;
-    else if (ballsLeft <= 0) winProb = 0;
-    else {
-      winProb = Math.min(99, Math.max(1, Math.round((currentRate / (currentRate + requiredRate)) * 100)));
-    }
-  } else {
-    // 1st Innings Projected Score
-    projectedScore = Math.round(runs + (parseFloat(crr) * ((totalOvers * 6) - balls) / 6));
   }
 
-  const fowText = fow?.map(f => `${f.wicket}-${f.score} (${f.batter}, ${f.overs})`).join('  ');
+  const fowText = fow?.map(f => `${f.wicket}-${f.score}`).join(' • ');
 
   return (
     <View style={styles.container}>
       <LinearGradient 
-        colors={['#0f172a', '#000']} 
+        colors={['#1e293b', '#000']} 
         style={styles.gradient}
         start={{x:0, y:0}}
         end={{x:0, y:1}}
@@ -94,7 +79,7 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
           ]} 
         >
           <LinearGradient
-            colors={['transparent', 'rgba(255,255,255,0.08)', 'transparent']}
+            colors={['transparent', 'rgba(255,255,255,0.05)', 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
@@ -104,78 +89,76 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
         <View style={styles.headerTop}>
           <View style={styles.scoreInfo}>
             <View style={styles.brandRow}>
-              <View style={[styles.liveBadge, bowlerName && { backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
-                <View style={[styles.liveDot, bowlerName && { backgroundColor: theme.colors.accent }]} />
-                <Text style={[styles.liveText, bowlerName && { color: theme.colors.accent }]}>
-                  {bowlerName ? `BOWLING: ${bowlerName.toUpperCase()}` : 'LIVE BROADCAST'}
+              <View style={[styles.liveBadge, bowlerName && styles.bowlingBadge]}>
+                <View style={[styles.liveDot, bowlerName && styles.bowlingDot]} />
+                <Text style={[styles.liveText, bowlerName && styles.bowlingText]}>
+                  {bowlerName ? `BOWL: ${bowlerName.toUpperCase()}` : 'LIVE'}
                 </Text>
               </View>
-              <Text style={styles.teamNameLabel}>{battingTeam.toUpperCase()}</Text>
+              <Text style={styles.teamNameLabel} numberOfLines={1}>{battingTeam.toUpperCase()}</Text>
             </View>
             
             <View style={styles.scoreDisplayRow}>
               <Text style={styles.mainScoreText}>{runs}</Text>
-              <Text style={styles.scoreDivider}>-</Text>
+              <Text style={styles.scoreDivider}>/</Text>
               <Text style={styles.wicketText}>{wickets}</Text>
             </View>
             
             <View style={styles.overRow}>
-              <Text style={styles.overLabel}>OVERS</Text>
-              <Text style={styles.overDetailText}>{oversStr}</Text>
-              <View style={styles.vDivider} />
-              <Text style={styles.overLabel}>CRR</Text>
-              <Text style={styles.crrValSmall}>{crr}</Text>
+              <View style={styles.statChip}>
+                <Text style={styles.statChipLab}>OV</Text>
+                <Text style={styles.statChipVal}>{oversStr}</Text>
+              </View>
+              <View style={styles.statChip}>
+                <Text style={styles.statChipLab}>CRR</Text>
+                <Text style={[styles.statChipVal, { color: theme.colors.success }]}>{crr}</Text>
+              </View>
             </View>
           </View>
           
           <View style={styles.rightStats}>
             {target !== undefined ? (
               <View style={styles.targetIndicator}>
-                <Text style={styles.targetSubLabel}>TARGET</Text>
-                <Text style={styles.targetMainVal}>{target}</Text>
+                <Text style={styles.targetSubLabel}>TO WIN</Text>
+                <Text style={styles.targetMainVal}>{runsNeeded}</Text>
+                <Text style={styles.targetBalls}>OFF {ballsLeft} BALLS</Text>
               </View>
             ) : (
               <View style={styles.logoBox}>
                 <Image source={require('../../assets/logo.png')} style={styles.logo} />
+                <Text style={styles.engineTag}>ELITE ENGINE</Text>
               </View>
             )}
           </View>
         </View>
 
-        {fowText ? (
-          <View style={styles.fowContainer}>
-            <View style={styles.fowPulse} />
-            <Text style={styles.fowLabel}>FOW TRACKER</Text>
-            <Text style={styles.fowText} numberOfLines={1}>{fowText}</Text>
+        {(fowText || partnership) && (
+          <View style={styles.bottomBar}>
+            {fowText && (
+              <View style={styles.fowSection}>
+                <Text style={styles.bottomLabel}>FOW</Text>
+                <Text style={styles.bottomVal} numberOfLines={1}>{fowText}</Text>
+              </View>
+            )}
+            {partnership && (
+              <View style={styles.pSection}>
+                <Text style={styles.bottomLabel}>PTR</Text>
+                <Text style={styles.bottomVal}>{partnership.runs} ({partnership.balls})</Text>
+              </View>
+            )}
           </View>
-        ) : null}
-
-        {partnership ? (
-          <View style={styles.pHeaderRow}>
-             <View style={styles.pBadge}><Text style={styles.pBadgeText}>PTR</Text></View>
-             <Text style={styles.pHeaderVal}>{partnership.runs}<Text style={{opacity: 0.4}}> runs</Text> <Text style={{opacity: 0.2}}>/</Text> {partnership.balls}<Text style={{opacity: 0.4}}> balls</Text></Text>
-          </View>
-        ) : null}
-
-        {/* Analytics bar removed for better screen visibility */}
-
+        )}
 
         {target !== undefined && (
-          <View style={styles.targetBar}>
-            <View style={styles.targetCol}>
-              <Text style={styles.targetLabel}>REQUIRED</Text>
-              <Text style={[styles.targetVal, styles.requiredRR]}>{runsNeeded}</Text>
-            </View>
-            <View style={styles.targetDivider} />
-            <View style={styles.targetCol}>
-              <Text style={styles.targetLabel}>REMAINING</Text>
-              <Text style={styles.targetVal}>{ballsLeft} BALLS</Text>
-            </View>
-            <View style={styles.targetDivider} />
-            <View style={styles.targetCol}>
-              <Text style={styles.targetLabel}>RRR</Text>
-              <Text style={[styles.targetVal, styles.requiredRR]}>{rrr}</Text>
-            </View>
+          <View style={styles.rrrBar}>
+            <LinearGradient 
+              colors={['rgba(244, 63, 94, 0.1)', 'rgba(0,0,0,0)']} 
+              start={{x:0, y:0}} end={{x:1, y:0}}
+              style={styles.rrrInner}
+            >
+              <Text style={styles.rrrLabel}>REQ RATE</Text>
+              <Text style={styles.rrrVal}>{rrr}</Text>
+            </LinearGradient>
           </View>
         )}
       </LinearGradient>
@@ -186,25 +169,30 @@ export const ScoreHeader: React.FC<ScoreHeaderProps> = ({
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     backgroundColor: '#000',
-    borderRadius: 20,
-    marginBottom: 12,
+    borderRadius: 24,
+    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
   },
   glimmer: {
     ...StyleSheet.absoluteFillObject,
-    width: width * 0.6,
+    width: width * 0.8,
     zIndex: 1,
-    opacity: 0.5,
+    opacity: 0.4,
   },
   gradient: {
-    padding: 10,
+    padding: 16,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   scoreInfo: {
     flex: 1,
@@ -212,231 +200,211 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 8,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  bowlingBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
   liveDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: '#ef4444',
-    marginRight: 4,
+    marginRight: 6,
+  },
+  bowlingDot: {
+    backgroundColor: theme.colors.accent,
   },
   liveText: {
-    fontSize: 7,
+    fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
     color: '#ef4444',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+  },
+  bowlingText: {
+    color: theme.colors.accent,
   },
   teamNameLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.4)',
     letterSpacing: 2,
+    flexShrink: 1,
   },
   scoreDisplayRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 2,
+    marginBottom: 8,
   },
   mainScoreText: {
-    fontSize: isSmallScreen ? 30 : 36,
+    fontSize: isSmallScreen ? 48 : 56,
     fontFamily: theme.typography.fontFamily.manrope,
     color: '#FFF',
-    letterSpacing: -1,
+    letterSpacing: -2,
+    fontWeight: '800',
   },
   scoreDivider: {
-    fontSize: isSmallScreen ? 20 : 24,
-    color: 'rgba(255,255,255,0.1)',
-    marginHorizontal: isSmallScreen ? 4 : 6,
-    fontWeight: '300',
+    fontSize: isSmallScreen ? 32 : 40,
+    color: 'rgba(255,255,255,0.15)',
+    marginHorizontal: 8,
+    fontWeight: '200',
   },
   wicketText: {
-    fontSize: isSmallScreen ? 28 : 32,
+    fontSize: isSmallScreen ? 44 : 52,
     fontFamily: theme.typography.fontFamily.manrope,
     color: theme.colors.accent,
+    fontWeight: '800',
   },
   overRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    gap: 12,
   },
-  overLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.2)',
-    letterSpacing: 1.5,
-    marginRight: 6,
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  overDetailText: {
-    fontSize: 13,
+  statChipLab: {
+    fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.3)',
+    marginRight: 6,
+    letterSpacing: 1,
+  },
+  statChipVal: {
+    fontSize: 14,
+    fontFamily: theme.typography.fontFamily.manrope,
     color: '#FFF',
-    marginRight: 10,
-  },
-  vDivider: {
-    width: 1,
-    height: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    marginRight: 10,
-  },
-  crrValSmall: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: theme.colors.success,
+    fontWeight: '700',
   },
   rightStats: {
     alignItems: 'flex-end',
   },
   targetIndicator: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 12,
+    borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
-  },
-  targetMainVal: {
-    fontSize: 20,
-    fontFamily: theme.typography.fontFamily.manrope,
-    color: '#FFF',
-    letterSpacing: -0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    minWidth: 100,
   },
   targetSubLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.2)',
-    marginBottom: 2,
-    letterSpacing: 1.5,
+    fontSize: 8,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  targetMainVal: {
+    fontSize: 32,
+    fontFamily: theme.typography.fontFamily.manrope,
+    color: '#FFF',
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
+  targetBalls: {
+    fontSize: 8,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: theme.colors.accent,
+    marginTop: 2,
+    letterSpacing: 1,
   },
   logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.01)',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    gap: 6,
   },
   logo: {
-    width: 24,
-    height: 24,
-    opacity: 0.6,
+    width: 36,
+    height: 36,
+    opacity: 0.8,
   },
-  fowContainer: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.02)',
-  },
-  fowPulse: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: theme.colors.accent,
-    marginRight: 8,
-  },
-  fowLabel: {
+  engineTag: {
     fontSize: 7,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.15)',
-    letterSpacing: 1.5,
-    marginRight: 8,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 2,
   },
-  fowText: {
+  bottomBar: {
+    marginTop: 16,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  fowSection: {
     flex: 1,
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.3)',
-    fontWeight: '700',
-  },
-  targetBar: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.02)',
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
-  },
-  targetCol: {
-    alignItems: 'center',
-  },
-  targetDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  targetLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.15)',
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  targetVal: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#FFF',
-  },
-  requiredRR: {
-    color: '#F43F5E',
-  },
-
-  // ─── Analytics Bar ───
-  analyticsBar: {
-    marginTop: 8,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    padding: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  probRow: { gap: 6 },
-  probLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5, textAlign: 'center' },
-  probTrack: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.05)', flexDirection: 'row', overflow: 'hidden' },
-  probFill: { height: '100%', backgroundColor: theme.colors.accent },
-  probFillOpp: { height: '100%', backgroundColor: 'rgba(255,255,255,0.1)' },
-  probTextRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  probVal: { fontSize: 8, fontWeight: '900', color: '#FFF', opacity: 0.8 },
-
-  projRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24 },
-  projItem: { alignItems: 'center' },
-  projLabel: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1, marginBottom: 2 },
-  projVal: { fontSize: 14, fontWeight: '900', color: theme.colors.accent },
-  projDivider: { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.05)' },
-  
-  // Partnership Header Styles
-  pHeaderRow: {
+  pSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  pBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.2)',
   },
-  pBadgeText: { fontSize: 7, fontWeight: '900', color: theme.colors.accent, letterSpacing: 0.5 },
-  pHeaderVal: { fontSize: 11, fontWeight: '800', color: '#FFF' },
+  bottomLabel: {
+    fontSize: 8,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.2)',
+    letterSpacing: 1.5,
+    marginRight: 8,
+  },
+  bottomVal: {
+    fontSize: 11,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: '#FFF',
+  },
+  rrrBar: {
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.2)',
+  },
+  rrrInner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  rrrLabel: {
+    fontSize: 9,
+    fontFamily: theme.typography.fontFamily.bold,
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 2,
+  },
+  rrrVal: {
+    fontSize: 16,
+    fontFamily: theme.typography.fontFamily.manrope,
+    color: '#F43F5E',
+    fontWeight: '800',
+  },
 });

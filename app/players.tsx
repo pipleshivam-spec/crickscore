@@ -133,7 +133,7 @@ export default function PlayersScreen() {
                     <Text style={styles.avatarText}>{player.name.charAt(0)}</Text>
                   </View>
                   <View style={styles.playerInfo}>
-                    <Text style={styles.playerName}>{player.name.toUpperCase()}</Text>
+                    <Text style={styles.playerName}>{(player.name || 'PLAYER').toUpperCase()}</Text>
                     <Text style={styles.playerTeam}>{player.team || 'FREE AGENT'}</Text>
                     
                     <View style={styles.statsRow}>

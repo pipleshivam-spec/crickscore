@@ -106,11 +106,11 @@ export const BatsmenDisplay: React.FC<BatsmenDisplayProps> = ({
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { marginBottom: 20 },
   bentoBox: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 32,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.colors.border,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -121,7 +121,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   headerLabel: {
     fontSize: 8,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.colors.textMuted,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -134,25 +134,25 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.border,
     marginHorizontal: 12,
     marginVertical: 4,
   },
   activeRow: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   nameCol: {
     flex: 1,
     justifyContent: 'center',
   },
   playerName: {
-    color: '#FFF',
+    color: theme.colors.text,
     fontSize: theme.typography.size.lg,
     fontFamily: theme.typography.fontFamily.bold,
     letterSpacing: theme.typography.letterSpacing.tight,
   },
   inactiveText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: theme.colors.textMuted,
     fontWeight: '700',
   },
   statsCols: {
@@ -164,20 +164,21 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: theme.typography.size.md,
     fontFamily: theme.typography.fontFamily.bold,
     textAlign: 'center',
+    color: theme.colors.text,
   },
   runsCol: { width: 28 },
   ballsCol: { width: 28 },
   foursCol: { width: 28 },
   sixesCol: { width: 28 },
   srCol: { width: 50, textAlign: 'right' },
-  mutedText: { color: 'rgba(255,255,255,0.2)', fontWeight: '700' },
+  mutedText: { color: theme.colors.textMuted, fontWeight: '700' },
   partnershipCard: {
     marginTop: 24,
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.colors.border,
   },
   partnershipInner: {
     padding: 20,
@@ -199,7 +200,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   partnershipLabel: {
     fontSize: 8,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.3)',
+    color: theme.colors.textMuted,
     letterSpacing: 2,
   },
   partnershipStats: {
@@ -210,22 +211,22 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   partnershipRuns: {
     fontSize: theme.typography.size.xl,
     fontFamily: theme.typography.fontFamily.manrope,
-    color: '#FFF',
+    color: theme.colors.text,
     letterSpacing: theme.typography.letterSpacing.tight,
   },
   partnershipBalls: {
     fontSize: 12,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.colors.textMuted,
   },
   swapBtn: {
     marginTop: 16,
     alignSelf: 'stretch',
     height: 56,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

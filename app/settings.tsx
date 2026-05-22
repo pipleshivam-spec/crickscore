@@ -44,7 +44,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[theme.colors.background, '#020617']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -88,7 +88,7 @@ export default function SettingsScreen() {
                 <Switch 
                   value={preferences.keepAwake} 
                   onValueChange={() => togglePreference('keepAwake')}
-                  trackColor={{ false: '#1e293b', true: theme.colors.accent + '80' }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.accent + '80' }}
                   thumbColor={preferences.keepAwake ? theme.colors.accent : '#94a3b8'}
                 />
               </View>
@@ -101,7 +101,7 @@ export default function SettingsScreen() {
                 <Switch 
                   value={preferences.showCelebrations} 
                   onValueChange={() => togglePreference('showCelebrations')}
-                  trackColor={{ false: '#1e293b', true: theme.colors.accent + '80' }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.accent + '80' }}
                   thumbColor={preferences.showCelebrations ? theme.colors.accent : '#94a3b8'}
                 />
               </View>
@@ -114,7 +114,7 @@ export default function SettingsScreen() {
                 <Switch 
                   value={preferences.professionalCommentary} 
                   onValueChange={() => togglePreference('professionalCommentary')}
-                  trackColor={{ false: '#1e293b', true: theme.colors.accent + '80' }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.accent + '80' }}
                   thumbColor={preferences.professionalCommentary ? theme.colors.accent : '#94a3b8'}
                 />
               </View>
@@ -143,31 +143,31 @@ export default function SettingsScreen() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   scroll: { paddingBottom: 120 },
   header: { padding: 24, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  backText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
-  title: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  backText: { color: theme.colors.text, fontSize: 18, fontWeight: '700' },
+  title: { fontSize: 24, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
   subtitle: { fontSize: 9, fontWeight: '800', color: theme.colors.accent, letterSpacing: 2, marginTop: 4 },
   section: { paddingHorizontal: 24, marginTop: 32 },
-  sectionTitle: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 2, marginBottom: 16 },
+  sectionTitle: { fontSize: 10, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2, marginBottom: 16 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  themeCard: { width: (width - 60) / 2, padding: 16, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', alignItems: 'center' },
-  themeCardActive: { borderColor: theme.colors.accent, backgroundColor: theme.colors.accent + '10' },
-  swatch: { width: 30, height: 30, borderRadius: 15, marginBottom: 12, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
-  themeName: { fontSize: 10, fontWeight: '900', color: '#FFF' },
+  themeCard: { width: (width - 60) / 2, padding: 16, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center' },
+  themeCardActive: { borderColor: theme.colors.accent, backgroundColor: theme.colors.surfaceAlt },
+  swatch: { width: 30, height: 30, borderRadius: 15, marginBottom: 12, borderWidth: 2, borderColor: theme.colors.border },
+  themeName: { fontSize: 10, fontWeight: '900', color: theme.colors.text },
   activeDot: { position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent },
-  glassCard: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+  glassCard: { backgroundColor: theme.colors.surface, borderRadius: 24, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' },
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
-  settingLabel: { fontSize: 13, fontWeight: '900', color: '#FFF' },
-  settingSub: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.3)', marginTop: 2 },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.03)', marginHorizontal: 20 },
+  settingLabel: { fontSize: 13, fontWeight: '900', color: theme.colors.text },
+  settingSub: { fontSize: 9, fontWeight: '700', color: theme.colors.textMuted, marginTop: 2 },
+  divider: { height: 1, backgroundColor: theme.colors.border, marginHorizontal: 20 },
   dangerCard: { padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.1)' },
   dangerTitle: { fontSize: 13, fontWeight: '900', color: '#ef4444' },
   dangerSub: { fontSize: 9, fontWeight: '700', color: 'rgba(239, 68, 68, 0.4)', marginTop: 2 },
   footer: { padding: 40, alignItems: 'center' },
-  footerText: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2 },
-  footerSub: { fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.1)', letterSpacing: 1, marginTop: 6 },
+  footerText: { fontSize: 9, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2 },
+  footerSub: { fontSize: 7, fontWeight: '800', color: theme.colors.textMuted, letterSpacing: 1, marginTop: 6 },
 });

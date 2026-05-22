@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeInDown, Layout } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { localDb } from '../src/lib/localDb';
+import { generateFixtures as genFixtures, syncTournamentMatches as syncMatches, startOneTapMatch as startMatch, handleResumeMatch as resumeMatch, deleteMatch as removeMatch } from '../src/lib/tournamentLogic';
 import { useAppTheme } from '../src/theme/ThemeContext';
 import { useLocalSearchParams, router } from 'expo-router';
 import { BottomNavBar } from '../src/components/BottomNavBar';
@@ -61,228 +62,15 @@ export default function TournamentDetails() {
     );
   };
 
-  const generateFixtures = async () => {
-    if (!tournament) return;
 
-    try {
-      setLoading(true);
-      const teams = tournament.teams.map((t: any) => t.name);
-      const matches = [];
-      for (let i = 0; i < teams.length; i++) {
-        for (let j = i + 1; j < teams.length; j++) {
-          matches.push({
-            id: `m_${Date.now()}_${i}_${j}`,
-            team_a: teams[i],
-            team_b: teams[j],
-            teamA: teams[i],
-            teamB: teams[j],
-            status: 'scheduled',
-            created_at: new Date().toISOString()
-          });
-        }
-      }
 
-      const updatedTournament = {
-        ...tournament,
-        matches: [...(tournament.matches || []), ...matches]
-      };
-      await localDb.saveTournament(updatedTournament);
-      loadTournament();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+// startOneTapMatch logic moved to tournamentLogic library.
 
-  const startOneTapMatch = async (teamA: string, teamB: string) => {
-    try {
-      setLoading(true);
-      const matchId = `match_${Date.now()}`;
-      const newMatch = {
-        id: matchId,
-        team_a: teamA,
-        team_b: teamB,
-        teamA: teamA,
-        teamB: teamB,
-        overs: tournament.overs,
-        status: 'live',
-        created_at: new Date().toISOString(),
-        tournament_id: id,
-        isLocal: true
-      };
+// deleteMatch logic moved to tournamentLogic library.
 
-      const updatedTournament = {
-        ...tournament,
-        matches: [...(tournament.matches || []), newMatch]
-      };
-      await localDb.saveTournament(updatedTournament);
-      await localDb.saveMatch(newMatch);
+// syncTournamentMatches logic moved to tournamentLogic library.
 
-      router.push({
-        pathname: '/toss',
-        params: { matchId, team1Name: teamA, team2Name: teamB }
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteMatch = (matchId: string) => {
-    Alert.alert(
-      "REMOVE FIXTURE",
-      "Remove this match from the fixture list and global history?",
-      [
-        { text: "CANCEL", style: "cancel" },
-        {
-          text: "REMOVE",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await localDb.deleteMatch(matchId);
-              loadTournament();
-            } catch (e) {
-              console.error(e);
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const syncTournamentMatches = async () => {
-    try {
-      setLoading(true);
-      const allMatches = await localDb.getMatches();
-      const leagueTeams = tournament.teams.map((t: any) => t.name.toLowerCase());
-      
-      const leagueMatches = allMatches.filter((m: any) => {
-        if (m.tournament_id === id) return true;
-        const t1 = (m.teamA || m.team_a || '').toLowerCase();
-        const t2 = (m.teamB || m.team_b || '').toLowerCase();
-        return m.tournament_id === null && leagueTeams.includes(t1) && leagueTeams.includes(t2);
-      });
-
-      const newTeams = tournament.teams.map((t: any) => ({
-        ...t,
-        played: 0, won: 0, lost: 0, draw: 0, points: 0, nrr: 0,
-        totalRunsScored: 0, totalOversFaced: 0, totalRunsConceded: 0, totalOversBowled: 0
-      }));
-
-      const processedMatches = leagueMatches.map((m: any) => {
-        const inn1 = m.innings?.[0];
-        const inn2 = m.innings?.[1];
-        
-        if (m.status === 'finished' && inn1 && inn2) {
-          const tAIdx = newTeams.findIndex((t: any) => t.name.toLowerCase() === inn1.battingTeam.toLowerCase());
-          const tBIdx = newTeams.findIndex((t: any) => t.name.toLowerCase() === inn2.battingTeam.toLowerCase());
-
-          if (tAIdx !== -1 && tBIdx !== -1) {
-            const teamA = newTeams[tAIdx];
-            const teamB = newTeams[tBIdx];
-            const tourOvers = tournament.overs || 20;
-
-            teamA.played++;
-            teamB.played++;
-
-            if (inn2.runs > inn1.runs) {
-              teamB.won++;
-              teamB.points += 2;
-              teamA.lost++;
-            } else if (inn2.runs < inn1.runs) {
-              teamA.won++;
-              teamA.points += 2;
-              teamB.lost++;
-            } else {
-              teamA.draw++;
-              teamB.draw++;
-              teamA.points += 1;
-              teamB.points += 1;
-            }
-
-            const oversA = (inn1.total_balls || inn1.balls?.length || 0) / 6 || 0.1;
-            const oversB = (inn2.total_balls || inn2.balls?.length || 0) / 6 || 0.1;
-
-            teamA.totalRunsScored += inn1.runs;
-            teamA.totalOversFaced += (inn1.wickets === 10 ? tourOvers : oversA);
-            teamA.totalRunsConceded += inn2.runs;
-            teamA.totalOversBowled += (inn2.wickets === 10 ? tourOvers : oversB);
-
-            teamB.totalRunsScored += inn2.runs;
-            teamB.totalOversFaced += (inn2.wickets === 10 ? tourOvers : oversB);
-            teamB.totalRunsConceded += inn1.runs;
-            teamB.totalOversBowled += (inn2.wickets === 10 ? tourOvers : oversA);
-
-            const safeNRR = (runs: number, faced: number, conceded: number, bowled: number) => {
-              if (faced === 0 || bowled === 0) return 0;
-              return (runs / faced) - (conceded / bowled);
-            };
-
-            teamA.nrr = safeNRR(teamA.totalRunsScored, teamA.totalOversFaced, teamA.totalRunsConceded, teamA.totalOversBowled);
-            teamB.nrr = safeNRR(teamB.totalRunsScored, teamB.totalOversFaced, teamB.totalRunsConceded, teamB.totalOversBowled);
-          }
-        }
-
-        return {
-          id: m.id,
-          teamA: m.teamA || m.team_a,
-          teamB: m.teamB || m.team_b,
-          status: m.status,
-          result: m.result,
-          date: m.date || m.created_at
-        };
-      });
-
-      const updatedTournament = {
-        ...tournament,
-        teams: newTeams,
-        matches: processedMatches
-      };
-
-      await localDb.saveTournament(updatedTournament);
-      setTournament(updatedTournament);
-      Alert.alert('LEAGUE SYNCED', 'Points table and fixtures updated from match archives.');
-    } catch (e) {
-      console.error(e);
-      Alert.alert('SYNC ERROR', 'Failed to synchronize league data.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResumeMatch = async (matchId: string) => {
-    try {
-      setLoading(true);
-      const fullMatch = await localDb.getMatch(matchId);
-      if (!fullMatch) {
-        Alert.alert('ERROR', 'Match data not found.');
-        return;
-      }
-
-      const activeInnings = fullMatch.innings?.find((i: any) => i.status === 'active') ||
-        fullMatch.innings?.[fullMatch.innings.length - 1] ||
-        { id: `${matchId}_inn1` };
-
-      router.push({
-        pathname: '/scoring',
-        params: {
-          matchId,
-          inningsId: activeInnings.id,
-          isLocal: 'true',
-          autoShowSummary: 'false'
-        }
-      });
-    } catch (e) {
-      Alert.alert('ERROR', 'Failed to resume match.');
-    } finally {
-      setLoading(false);
-    }
-  };
+// handleResumeMatch logic moved to tournamentLogic library.
 
   if (loading || !tournament) {
     return (
@@ -416,12 +204,12 @@ export default function TournamentDetails() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/tournaments')}>
-            <Ionicons name="chevron-back" size={20} color="#FFF" />
+            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title} numberOfLines={1}>{(tournament.name || 'LEAGUE').toUpperCase()}</Text>
@@ -432,7 +220,7 @@ export default function TournamentDetails() {
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteTournament}>
             <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.pdfBtn} onPress={syncTournamentMatches}>
+          <TouchableOpacity style={styles.pdfBtn} onPress={() => syncMatches(tournament, setLoading, loadTournament)}>
             <Ionicons name="sync-outline" size={20} color={theme.colors.success} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.pdfBtn} onPress={generateTournamentPDF}>
@@ -463,14 +251,14 @@ export default function TournamentDetails() {
               style={[styles.tab, activeTab === 'points' && styles.tabActive]}
               onPress={() => setActiveTab('points')}
             >
-              <Ionicons name="trophy" size={12} color={activeTab === 'points' ? theme.colors.accent : 'rgba(255,255,255,0.2)'} style={{ marginRight: 6 }} />
+              <Ionicons name="trophy" size={12} color={activeTab === 'points' ? theme.colors.accent : theme.colors.textMuted} style={{ marginRight: 6 }} />
               <Text style={[styles.tabText, activeTab === 'points' && styles.tabTextActive]}>STANDINGS</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'matches' && styles.tabActive]}
               onPress={() => setActiveTab('matches')}
             >
-              <Ionicons name="calendar" size={12} color={activeTab === 'matches' ? theme.colors.accent : 'rgba(255,255,255,0.2)'} style={{ marginRight: 6 }} />
+              <Ionicons name="calendar" size={12} color={activeTab === 'matches' ? theme.colors.accent : theme.colors.textMuted} style={{ marginRight: 6 }} />
               <Text style={[styles.tabText, activeTab === 'matches' && styles.tabTextActive]}>FIXTURES</Text>
             </TouchableOpacity>
           </View>
@@ -495,7 +283,7 @@ export default function TournamentDetails() {
                   <View key={index} style={[styles.tableRow, index === 0 && styles.topRow]}>
                     <View style={{ flex: 2.5, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <View style={[styles.rankBox, index === 0 && styles.rankBoxGold]}>
-                        <Text style={[styles.rank, index === 0 && { color: '#000' }]}>{index + 1}</Text>
+                        <Text style={[styles.rank, index === 0 && { color: '#FFF' }]}>{index + 1}</Text>
                       </View>
                       <Text style={styles.teamName} numberOfLines={1}>{(team.name || 'TEAM').toUpperCase()}</Text>
                     </View>
@@ -557,10 +345,10 @@ export default function TournamentDetails() {
                   <TouchableOpacity
                     style={[styles.quickStartBtn, (!selectedTeams.a || !selectedTeams.b) && { opacity: 0.5 }]}
                     disabled={!selectedTeams.a || !selectedTeams.b}
-                    onPress={() => startOneTapMatch(selectedTeams.a!, selectedTeams.b!)}
+                    onPress={() => startMatch(tournament, selectedTeams.a!, selectedTeams.b!, setLoading, loadTournament)}
                   >
                     <LinearGradient colors={[theme.colors.accent, '#f97316']} style={styles.quickStartBtnInner}>
-                      <Ionicons name="flash" size={14} color="#000" />
+                      <Ionicons name="flash" size={14} color="#FFF" />
                       <Text style={styles.quickStartBtnText}>INITIALIZE LIVE SESSION</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -577,9 +365,9 @@ export default function TournamentDetails() {
                       activeOpacity={0.8}
                       onPress={() => {
                         if (match.status === 'scheduled') {
-                          startOneTapMatch(match.teamA || match.team_a, match.teamB || match.team_b);
+                          startMatch(tournament, match.teamA || match.team_a, match.teamB || match.team_b, setLoading, loadTournament);
                         } else if (match.status === 'live' && match.id) {
-                          handleResumeMatch(match.id);
+                          resumeMatch(match.id, setLoading);
                         }
                       }}
                     >
@@ -596,7 +384,7 @@ export default function TournamentDetails() {
                           </View>
                           <TouchableOpacity
                             style={styles.matchDeleteBtn}
-                            onPress={(e) => { e.stopPropagation?.(); deleteMatch(match.id); }}
+                            onPress={(e) => { e.stopPropagation?.(); removeMatch(match.id, setLoading, loadTournament); }}
                           >
                             <Ionicons name="trash-outline" size={14} color="rgba(239,68,68,0.5)" />
                           </TouchableOpacity>
@@ -622,7 +410,7 @@ export default function TournamentDetails() {
                       )}
 
                       <View style={styles.fixtureFooter}>
-                        <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.3)" />
+                        <Ionicons name="time-outline" size={12} color={theme.colors.textMuted} />
                         <Text style={styles.matchDateText}>{new Date(match.date || match.created_at).toLocaleDateString()} • BROADCAST ARCHIVE</Text>
                         {(match.status === 'scheduled' || match.status === 'live') && (
                           <View style={styles.tapToStart}>
@@ -639,12 +427,12 @@ export default function TournamentDetails() {
               ) : (
                 <Animated.View entering={FadeIn.duration(800)} style={styles.emptyState}>
                   <View style={styles.emptyIconBox}>
-                    <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.05)" />
+                    <Ionicons name="calendar-outline" size={48} color={theme.colors.textMuted + '20'} />
                   </View>
                   <Text style={styles.emptyTitle}>NO ARCHIVED FIXTURES</Text>
                   <Text style={styles.emptySub}>Set up the entire round-robin schedule instantly for professional league management</Text>
 
-                  <TouchableOpacity style={styles.generateBtn} onPress={generateFixtures}>
+                  <TouchableOpacity style={styles.generateBtn} onPress={() => genFixtures(tournament, setLoading, loadTournament)}>
                     <LinearGradient colors={[theme.colors.accent, theme.colors.accentSecondary]} style={styles.genBtnInner}>
                       <Text style={styles.genBtnText}>INITIALIZE ALL FIXTURES</Text>
                     </LinearGradient>
@@ -661,7 +449,7 @@ export default function TournamentDetails() {
             onPress={() => router.push({ pathname: '/match-setup', params: { tournamentId: id } })}
           >
             <LinearGradient colors={[theme.colors.accent, theme.colors.accentSecondary]} style={styles.fabInner}>
-              <Ionicons name="add" size={24} color="#000" />
+              <Ionicons name="add" size={24} color="#FFF" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -683,11 +471,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)'
+    borderBottomColor: theme.colors.border
   },
-  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
   headerTitleContainer: { flex: 1 },
-  title: { fontSize: 22, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.8 },
+  title: { fontSize: 22, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -0.8 },
   badgeRow: { marginTop: 4 },
   tagText: { fontSize: 9, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.accent, letterSpacing: 1.5, textTransform: 'uppercase' },
   deleteBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.15)' },
@@ -695,104 +483,107 @@ const createStyles = (theme: any) => StyleSheet.create({
   insightsBanner: {
     flexDirection: 'row',
     paddingVertical: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: theme.colors.surface,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.03,
     shadowRadius: 10,
+    elevation: 2,
   },
   insightBox: { flex: 1, alignItems: 'center' },
-  insightVal: { fontSize: 20, fontFamily: theme.typography.fontFamily.manrope, color: '#FFF', fontWeight: '800' },
-  insightLab: { fontSize: 8, fontFamily: theme.typography.fontFamily.semiBold, color: 'rgba(255,255,255,0.3)', marginTop: 4, letterSpacing: 1.5, textTransform: 'uppercase' },
-  insightDivider: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.08)' },
+  insightVal: { fontSize: 20, fontFamily: theme.typography.fontFamily.manrope, color: theme.colors.text, fontWeight: '800' },
+  insightLab: { fontSize: 8, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.textMuted, marginTop: 4, letterSpacing: 1.5, textTransform: 'uppercase' },
+  insightDivider: { width: 1, height: 24, backgroundColor: theme.colors.border },
   tabsContainer: { paddingHorizontal: 20, marginTop: 16, marginBottom: 8 },
-  tabs: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 6, gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  tabs: { flexDirection: 'row', backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, padding: 6, gap: 6, borderWidth: 1, borderColor: theme.colors.border },
   tab: { flex: 1, height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  tabText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
+  tabActive: { backgroundColor: theme.colors.surface, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  tabText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1 },
   tabTextActive: { color: theme.colors.accent },
   contentArea: { flex: 1 },
   innerScroll: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 8 },
   tableCard: { 
-    backgroundColor: 'rgba(255,255,255,0.02)', 
+    backgroundColor: theme.colors.surface, 
     borderRadius: 24, 
     padding: 16, 
     borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.04,
     shadowRadius: 16,
+    elevation: 3,
   },
-  tableHeader: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', marginBottom: 8 },
-  th: { flex: 1, fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, textAlign: 'center', textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', paddingVertical: 14, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
-  topRow: { backgroundColor: 'rgba(255, 126, 95, 0.08)', borderRadius: 16, borderBottomWidth: 0, marginHorizontal: -4, paddingHorizontal: 4 },
-  rankBox: { width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  tableHeader: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border, marginBottom: 8 },
+  th: { flex: 1, fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1.5, textAlign: 'center', textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 14, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  topRow: { backgroundColor: 'rgba(162, 28, 60, 0.05)', borderRadius: 16, borderBottomWidth: 0, marginHorizontal: -4, paddingHorizontal: 4 },
+  rankBox: { width: 26, height: 26, borderRadius: 8, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
   rankBoxGold: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  rank: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.5)' },
-  teamName: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.3 },
-  td: { flex: 1, fontSize: 14, fontFamily: theme.typography.fontFamily.manrope, color: '#FFF', textAlign: 'center', fontWeight: '700' },
+  rank: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted },
+  teamName: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -0.3 },
+  td: { flex: 1, fontSize: 14, fontFamily: theme.typography.fontFamily.manrope, color: theme.colors.text, textAlign: 'center', fontWeight: '700' },
   quickStartSection: { marginTop: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
   sectionTitle: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 2.5, textTransform: 'uppercase' },
-  titleLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
-  quickSetupBox: { backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 24, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  titleLine: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  quickSetupBox: { backgroundColor: theme.colors.surface, borderRadius: 24, padding: 16, borderWidth: 1, borderColor: theme.colors.border },
   selectRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   selectItem: { flex: 1 },
-  selectLabel: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.25)', letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' },
+  selectLabel: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' },
   chipScroll: { paddingVertical: 4 },
-  teamChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  teamChipActive: { backgroundColor: 'rgba(255, 126, 95, 0.15)', borderColor: theme.colors.accent },
-  teamChipText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.4)' },
+  teamChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, marginRight: 8, borderWidth: 1, borderColor: theme.colors.border },
+  teamChipActive: { backgroundColor: 'rgba(162, 28, 60, 0.05)', borderColor: theme.colors.accent },
+  teamChipText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted },
   teamChipTextActive: { color: theme.colors.accent },
-  vsCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
-  vsText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.5)' },
+  vsCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  vsText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted },
   quickStartBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
   quickStartBtnInner: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  quickStartBtnText: { color: '#000', fontSize: 12, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 1.5 },
+  quickStartBtnText: { color: '#FFF', fontSize: 12, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 1.5 },
   fixtureCard: { 
-    backgroundColor: 'rgba(255,255,255,0.02)', 
+    backgroundColor: theme.colors.surface, 
     borderRadius: 24, 
     padding: 20, 
     marginBottom: 16, 
     borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: theme.colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.03,
     shadowRadius: 12,
+    elevation: 2,
   },
   matchDeleteBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center' },
   fixtureHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  matchIdBox: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
-  matchIdText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5 },
+  matchIdBox: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.colors.surfaceAlt },
+  matchIdText: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1.5 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 1.5 },
   matchBody: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   mTeamBox: { flex: 1 },
-  mTeamName: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.5 },
+  mTeamName: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -0.5 },
   mVsBox: { width: 40, alignItems: 'center' },
   mVsText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, opacity: 0.4 },
   resultRow: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: 14, marginVertical: 12, borderLeftWidth: 3, borderLeftColor: '#10B981' },
   resultText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: '#10B981', letterSpacing: 1 },
-  fixtureFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  matchDateText: { fontSize: 10, fontFamily: theme.typography.fontFamily.semiBold, color: 'rgba(255,255,255,0.35)', flex: 1 },
+  fixtureFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border },
+  matchDateText: { fontSize: 10, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.textMuted, flex: 1 },
   tapToStart: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tapText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 1 },
   emptyState: { marginTop: 60, alignItems: 'center', padding: 40 },
-  emptyIconBox: { width: 80, height: 80, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  emptyTitle: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: 1.5 },
-  emptySub: { fontSize: 10, fontFamily: theme.typography.fontFamily.semiBold, color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: 12, lineHeight: 16 },
+  emptyIconBox: { width: 80, height: 80, borderRadius: 32, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: theme.colors.border },
+  emptyTitle: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: 1.5 },
+  emptySub: { fontSize: 10, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.textMuted, textAlign: 'center', marginTop: 12, lineHeight: 16 },
   generateBtn: { marginTop: 40, borderRadius: 20, overflow: 'hidden', width: '100%' },
   genBtnInner: { height: 56, alignItems: 'center', justifyContent: 'center' },
-  genBtnText: { color: '#000', fontSize: 12, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
+  genBtnText: { color: '#FFF', fontSize: 12, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
   fabContainer: { position: 'absolute', bottom: 100, right: 24 },
   fab: { borderRadius: 24, overflow: 'hidden', ...theme.shadows.glow },
   fabInner: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center' },

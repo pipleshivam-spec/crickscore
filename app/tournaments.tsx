@@ -65,7 +65,7 @@ export default function Tournaments() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -93,16 +93,16 @@ export default function Tournaments() {
                   activeOpacity={0.9}
                 >
                   <LinearGradient 
-                    colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']} 
+                    colors={[theme.colors.surface, theme.colors.surfaceAlt]} 
                     style={styles.cardInner}
                   >
                     <View style={styles.cardHeader}>
                       <View style={styles.statusBadge}>
-                        <View style={[styles.statusDot, { backgroundColor: tour.status === 'active' ? '#10B981' : '#64748b' }]} />
+                        <View style={[styles.statusDot, { backgroundColor: tour.status === 'active' ? '#10B981' : theme.colors.textMuted }]} />
                         <Text style={styles.statusText}>{(tour.status || 'ACTIVE').toUpperCase()}</Text>
                       </View>
                       <View style={styles.dateBadge}>
-                        <Ionicons name="calendar-outline" size={10} color="rgba(255,255,255,0.2)" />
+                        <Ionicons name="calendar-outline" size={10} color={theme.colors.textMuted} />
                         <Text style={styles.dateText}>{new Date(tour.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</Text>
                       </View>
                     </View>
@@ -151,7 +151,7 @@ export default function Tournaments() {
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <LinearGradient colors={['#1e293b', '#0f172a']} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={[theme.colors.surface, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
             <Text style={styles.modalTitle}>NEW TOURNAMENT</Text>
             
             <View style={styles.inputGroup}>
@@ -159,7 +159,7 @@ export default function Tournaments() {
               <TextInput 
                 style={styles.input} 
                 placeholder="e.g. Summer Premier League" 
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor="rgba(0,0,0,0.25)"
                 value={newTournament.name}
                 onChangeText={(t) => setNewTournament(prev => ({ ...prev, name: t }))}
               />
@@ -171,7 +171,7 @@ export default function Tournaments() {
                 style={styles.input} 
                 keyboardType="numeric"
                 placeholder="20" 
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor="rgba(0,0,0,0.25)"
                 value={newTournament.overs}
                 onChangeText={(t) => setNewTournament(prev => ({ ...prev, overs: t }))}
               />
@@ -183,7 +183,7 @@ export default function Tournaments() {
                 style={[styles.input, { height: 100, textAlignVertical: 'top', paddingTop: 12 }]} 
                 multiline
                 placeholder="Team A, Team B, Team C..." 
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor="rgba(0,0,0,0.25)"
                 value={newTournament.teams}
                 onChangeText={(t) => setNewTournament(prev => ({ ...prev, teams: t }))}
               />
@@ -209,51 +209,51 @@ export default function Tournaments() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1, paddingTop: 10 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background },
   header: { padding: 32, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 28, fontWeight: '900', color: '#FFF', letterSpacing: -1 },
+  title: { fontSize: 28, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
   subtitle: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2, marginTop: 4 },
   addBtn: { borderRadius: 12, overflow: 'hidden' },
   addBtnInner: { paddingHorizontal: 16, paddingVertical: 8 },
-  addBtnText: { color: '#000', fontSize: 10, fontWeight: '900' },
+  addBtnText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
   scroll: { paddingHorizontal: 24, paddingBottom: 120 },
 
-  tourCard: { marginBottom: 20, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  tourCard: { marginBottom: 20, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border },
   cardInner: { padding: 24 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.surfaceAlt, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.border },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.6)', letterSpacing: 1 },
-  dateBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.02)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  dateText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 },
-  tourName: { fontSize: 20, fontWeight: '900', color: '#FFF', letterSpacing: -0.5, marginBottom: 20 },
-  tourMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
+  statusText: { fontSize: 8, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
+  dateBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.surfaceAlt, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.border },
+  dateText: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 0.5 },
+  tourName: { fontSize: 20, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5, marginBottom: 20 },
+  tourMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.colors.surfaceAlt, padding: 16, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border },
   metaItem: { alignItems: 'center', flex: 1 },
   metaVal: { fontSize: 18, fontWeight: '900', color: theme.colors.accent },
-  metaLab: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1, marginTop: 4 },
-  vDivider: { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.1)' },
-  cardFooterPro: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
-  footerTextPro: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5 },
+  metaLab: { fontSize: 8, fontWeight: '800', color: theme.colors.textMuted, letterSpacing: 1, marginTop: 4 },
+  vDivider: { width: 1, height: 20, backgroundColor: theme.colors.border },
+  cardFooterPro: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border },
+  footerTextPro: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1.5 },
 
-  emptyBox: { marginTop: 60, alignItems: 'center', padding: 40, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
+  emptyBox: { marginTop: 60, alignItems: 'center', padding: 40, borderRadius: 32, borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed' },
   emptyIcon: { fontSize: 48, marginBottom: 24, opacity: 0.2 },
-  emptyText: { fontSize: 14, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
-  emptySub: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 12, lineHeight: 18 },
-  emptyAddBtn: { marginTop: 32, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
+  emptyText: { fontSize: 14, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
+  emptySub: { fontSize: 10, fontWeight: '700', color: theme.colors.textMuted, textAlign: 'center', marginTop: 12, lineHeight: 18 },
+  emptyAddBtn: { marginTop: 32, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border },
   emptyAddText: { color: theme.colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#0f172a', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 32, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: '#FFF', letterSpacing: 2, marginBottom: 32, textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: theme.colors.surface, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 32, borderTopWidth: 1, borderTopColor: theme.colors.border, overflow: 'hidden' },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: theme.colors.text, letterSpacing: 2, marginBottom: 32, textAlign: 'center' },
   inputGroup: { marginBottom: 24 },
   label: { fontSize: 9, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2, marginBottom: 12 },
-  input: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, height: 56, paddingHorizontal: 20, color: '#FFF', fontWeight: '700', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  input: { backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, height: 56, paddingHorizontal: 20, color: theme.colors.text, fontWeight: '700', borderWidth: 1, borderColor: theme.colors.border },
   modalActions: { flexDirection: 'row', gap: 16, marginTop: 16 },
-  cancelBtn: { flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.02)' },
-  cancelText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '900' },
+  cancelBtn: { flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border },
+  cancelText: { color: theme.colors.textMuted, fontSize: 12, fontWeight: '900' },
   createBtn: { flex: 2, height: 64, borderRadius: 20, overflow: 'hidden' },
   createBtnInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  createBtnText: { color: '#000', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
+  createBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
 });

@@ -3,12 +3,14 @@ import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Dimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
-import { theme } from '../src/theme';
+import { useAppTheme } from '../src/theme/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function CreateSession() {
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -65,7 +67,7 @@ export default function CreateSession() {
 
   return (
     <View style={styles.container}>
-      {/* Global ProfessionalBackground provides the depth here */}
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -113,19 +115,19 @@ export default function CreateSession() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+const createStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   content: { flex: 1, padding: 32, justifyContent: 'space-between' },
   backBtn: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: theme.colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.colors.border,
   },
   backIcon: { color: theme.colors.text, fontSize: 18 },
   centerSection: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 100,
     borderWidth: 2,
-    borderColor: 'rgba(255, 126, 95, 0.2)',
+    borderColor: 'rgba(162, 28, 60, 0.2)',
     borderStyle: 'dashed',
   },
   ringGradient: {
@@ -159,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...theme.shadows.card,
     borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
   },
   logoText: { fontSize: 32 },
   textGroup: { alignItems: 'center' },
@@ -169,12 +171,12 @@ const styles = StyleSheet.create({
   statusBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.colors.border,
   },
   pulseDot: {
     width: 6,
@@ -188,5 +190,5 @@ const styles = StyleSheet.create({
   retryBtn: { width: '100%', height: 60, borderRadius: 20, overflow: 'hidden' },
   retryInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   retryText: { color: '#FFF', fontWeight: '900', letterSpacing: 1 },
-  versionText: { fontSize: 8, color: 'rgba(255,255,255,0.2)', fontWeight: '800', letterSpacing: 2 },
+  versionText: { fontSize: 8, color: theme.colors.textMuted, fontWeight: '800', letterSpacing: 2 },
 });

@@ -218,14 +218,14 @@ function RootLayoutContent() {
   }, [fontsLoaded]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <StatusBar style="light" />
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <StatusBar style="dark" />
       
       {isAppReady && (
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#000' },
+            contentStyle: { backgroundColor: theme.colors.background },
             animation: 'fade',
           }}
         >

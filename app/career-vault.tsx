@@ -71,10 +71,10 @@ export default function CareerVault() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.glow, { top: -100, right: -100, backgroundColor: 'rgba(59, 130, 246, 0.1)' }]} />
-      <View style={[styles.glow, { bottom: -100, left: -100, backgroundColor: 'rgba(239, 68, 68, 0.05)' }]} />
+      <View style={[styles.glow, { top: -100, right: -100, backgroundColor: theme.colors.accent + '05' }]} />
+      <View style={[styles.glow, { bottom: -100, left: -100, backgroundColor: theme.colors.success + '03' }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -89,36 +89,59 @@ export default function CareerVault() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.legendContainer}>
-            <LinearGradient colors={['rgba(255, 126, 95, 0.1)', 'rgba(254, 180, 123, 0.02)']} style={styles.legendCard}>
-              <Text style={styles.legendLabel}>ALL-TIME LEGEND</Text>
-              {statsOverview.topScorer ? (
-                <View style={styles.legendContent}>
-                  <View style={styles.legendInitialBox}>
-                    <Text style={styles.legendInitial}>{statsOverview.topScorer.name[0]}</Text>
+            <View style={styles.legendRow}>
+              {/* Top Scorer Card */}
+              <LinearGradient colors={[theme.colors.surface, theme.colors.surfaceAlt]} style={styles.legendCardHalf}>
+                <Text style={styles.legendLabel}>🏏 MOST RUNS</Text>
+                {statsOverview.topScorer && (statsOverview.topScorer.runs || 0) > 0 ? (
+                  <View style={styles.legendContentHalf}>
+                    <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.accent }]}>
+                      <Text style={styles.legendInitialSmall}>{statsOverview.topScorer.name[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.legendTextContainer}>
+                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topScorer.name || 'PLAYER').toUpperCase()}</Text>
+                      <Text style={styles.legendStatsSmall}>{statsOverview.topScorer.runs} RUNS</Text>
+                      <Text style={styles.legendMatchesSmall}>{statsOverview.topScorer.matches} MATCHES</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.legendName}>{(statsOverview.topScorer.name || 'PLAYER').toUpperCase()}</Text>
-                    <Text style={styles.legendStats}>{statsOverview.topScorer.runs} RUNS • {statsOverview.topScorer.matches} MATCHES</Text>
+                ) : (
+                  <Text style={styles.emptyLegendSmall}>NO DATA</Text>
+                )}
+              </LinearGradient>
+
+              {/* Top Wicket Taker Card */}
+              <LinearGradient colors={[theme.colors.surface, theme.colors.surfaceAlt]} style={styles.legendCardHalf}>
+                <Text style={styles.legendLabel}>⚡ MOST WICKETS</Text>
+                {statsOverview.topWicketTaker && (statsOverview.topWicketTaker.wickets || 0) > 0 ? (
+                  <View style={styles.legendContentHalf}>
+                    <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.success || '#2E7D32' }]}>
+                      <Text style={styles.legendInitialSmall}>{statsOverview.topWicketTaker.name[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.legendTextContainer}>
+                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topWicketTaker.name || 'PLAYER').toUpperCase()}</Text>
+                      <Text style={styles.legendStatsSmall}>{statsOverview.topWicketTaker.wickets} WKTS</Text>
+                      <Text style={styles.legendMatchesSmall}>{statsOverview.topWicketTaker.matches} MATCHES</Text>
+                    </View>
                   </View>
-                </View>
-              ) : (
-                <Text style={styles.emptyLegend}>NO DATA RECORDED</Text>
-              )}
-            </LinearGradient>
+                ) : (
+                  <Text style={styles.emptyLegendSmall}>NO DATA</Text>
+                )}
+              </LinearGradient>
+            </View>
           </View>
 
           <View style={styles.filterSection}>
             <View style={styles.searchBar}>
               <TextInput
                 placeholder="SEARCH PLAYER..."
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor={theme.colors.textMuted + '80'}
                 style={styles.searchInput}
                 value={search}
                 onChangeText={setSearch}
               />
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => setSearch('')} style={styles.clearSearch}>
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '900' }}>✕ CLEAR</Text>
+                  <Text style={{ color: theme.colors.textMuted, fontSize: 10, fontWeight: '900' }}>✕ CLEAR</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -185,9 +208,9 @@ export default function CareerVault() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1, paddingTop: 10 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background },
   glow: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.2 },
   header: {
     paddingHorizontal: 24,
@@ -197,79 +220,85 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  title: { fontSize: 32, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -1.2 },
+  title: { fontSize: 32, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -1.2 },
   subtitle: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
-  backBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  backText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+  backBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  backText: { color: theme.colors.text, fontSize: 18, fontWeight: '700' },
   scroll: { paddingBottom: 130 },
 
   legendContainer: { paddingHorizontal: 24, marginBottom: 32 },
-  legendCard: {
-    borderRadius: 28,
-    padding: 24,
+  legendRow: { flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  legendCardHalf: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  legendLabel: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: '#FE6B8B', letterSpacing: 4, marginBottom: 20, textTransform: 'uppercase' },
-  legendContent: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  legendInitialBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FE6B8B', alignItems: 'center', justifyContent: 'center', shadowColor: '#FE6B8B', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 10 },
-  legendInitial: { fontSize: 28, fontFamily: theme.typography.fontFamily.bold, color: '#000' },
-  legendName: { fontSize: 22, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.5 },
-  legendStats: { fontSize: 11, fontFamily: theme.typography.fontFamily.semiBold, color: 'rgba(255,255,255,0.4)', marginTop: 4 },
-  emptyLegend: { color: 'rgba(255,255,255,0.15)', fontSize: 14, fontFamily: theme.typography.fontFamily.bold, textAlign: 'center', paddingVertical: 10 },
+  legendLabel: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' },
+  legendContentHalf: { flexDirection: 'column', alignItems: 'center', gap: 8 },
+  legendInitialBoxSmall: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  legendInitialSmall: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: '#FFF' },
+  legendTextContainer: { alignItems: 'center' },
+  legendNameSmall: { fontSize: 13, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -0.2, textAlign: 'center' },
+  legendStatsSmall: { fontSize: 14, fontFamily: theme.typography.fontFamily.manrope, color: theme.colors.text, fontWeight: '800', marginTop: 4 },
+  legendMatchesSmall: { fontSize: 9, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.textMuted, marginTop: 2 },
+  emptyLegendSmall: { color: theme.colors.textMuted, fontSize: 11, fontFamily: theme.typography.fontFamily.bold, textAlign: 'center', paddingVertical: 12 },
 
   filterSection: { paddingHorizontal: 24, marginBottom: 28 },
   searchBar: {
     height: 56,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
     marginBottom: 20
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#FFF', fontFamily: theme.typography.fontFamily.semiBold },
+  searchInput: { flex: 1, fontSize: 15, color: theme.colors.text, fontFamily: theme.typography.fontFamily.semiBold },
   clearSearch: { padding: 8 },
   chipsRow: { flexDirection: 'row' },
-  chip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', marginRight: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  chip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, backgroundColor: theme.colors.surface, marginRight: 10, borderWidth: 1, borderColor: theme.colors.border },
   chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
-  chipTextActive: { color: '#000' },
+  chipText: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1 },
+  chipTextActive: { color: '#FFF' },
 
   listContainer: { paddingHorizontal: 24 },
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.03,
     shadowRadius: 8,
+    elevation: 2,
   },
   rankBox: { width: 44, alignItems: 'center' },
   rankText: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, opacity: 0.6 },
   playerMain: { flex: 1, marginLeft: 12 },
-  playerName: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', marginBottom: 12, letterSpacing: -0.2 },
+  playerName: { fontSize: 16, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, marginBottom: 12, letterSpacing: -0.2 },
   playerMetrics: { flexDirection: 'row', gap: 20 },
   metric: { alignItems: 'flex-start' },
-  metricVal: { fontSize: 18, fontFamily: theme.typography.fontFamily.manrope, color: '#FFF', fontWeight: '800' },
-  metricLab: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, marginTop: 4, textTransform: 'uppercase' },
+  metricVal: { fontSize: 18, fontFamily: theme.typography.fontFamily.manrope, color: theme.colors.text, fontWeight: '800' },
+  metricLab: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1.5, marginTop: 4, textTransform: 'uppercase' },
   playerRight: { marginLeft: 16, width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.05)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239,68,68,0.1)' },
   deleteIcon: { fontSize: 18, opacity: 0.6 },
 
   emptyBox: { marginTop: 80, alignItems: 'center', paddingHorizontal: 40 },
-  emptyText: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.4)', letterSpacing: 2 },
-  emptySub: { fontSize: 11, fontFamily: theme.typography.fontFamily.semiBold, color: 'rgba(255,255,255,0.2)', marginTop: 12, textAlign: 'center', lineHeight: 18 },
+  emptyText: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 2 },
+  emptySub: { fontSize: 11, fontFamily: theme.typography.fontFamily.semiBold, color: theme.colors.textMuted, marginTop: 12, textAlign: 'center', lineHeight: 18 },
 });

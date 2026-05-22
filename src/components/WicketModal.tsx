@@ -131,7 +131,7 @@ export const WicketModal: React.FC<WicketModalProps> = ({
 };
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   content: { 
     backgroundColor: theme.colors.background, 
     borderTopLeftRadius: 40, 
@@ -139,7 +139,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     padding: 32, 
     maxHeight: height * 0.85,
     borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
   },
   headerGlow: {
     position: 'absolute',
@@ -151,7 +151,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderTopRightRadius: 40,
   },
   header: { alignItems: 'center', marginBottom: 32 },
-  handle: { width: 40, height: 4, backgroundColor: theme.colors.glassBorder, borderRadius: 2, marginBottom: 20 },
+  handle: { width: 40, height: 4, backgroundColor: theme.colors.border, borderRadius: 2, marginBottom: 20 },
   title: { fontSize: 24, fontWeight: '900', color: theme.colors.danger, letterSpacing: 2 },
   subTitle: { fontSize: 9, fontWeight: '800', color: theme.colors.textMuted, letterSpacing: 2, marginTop: 4 },
   scroll: { paddingBottom: 20 },
@@ -163,10 +163,10 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 16, 
     backgroundColor: theme.colors.surface, 
     borderWidth: 1, 
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
     alignItems: 'center',
   },
-  activeTypeBtn: { backgroundColor: theme.colors.glass, borderColor: theme.colors.danger },
+  activeTypeBtn: { backgroundColor: theme.colors.surfaceAlt, borderColor: theme.colors.danger },
   typeText: { color: theme.colors.textMuted, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
   activeTypeText: { color: theme.colors.danger },
   inputSection: { marginBottom: 24 },
@@ -174,7 +174,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
     height: 56,
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -189,7 +189,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     justifyContent: 'center', 
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
   },
   cancelText: { color: theme.colors.textMuted, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   confirmBtn: { flex: 2, height: 60, borderRadius: 20, overflow: 'hidden' },

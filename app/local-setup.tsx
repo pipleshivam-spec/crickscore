@@ -97,7 +97,7 @@ export default function LocalSetup() {
 
   return (
     <View style={styles.container}>
-      {/* Global ProfessionalBackground provides the depth here */}
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -131,7 +131,7 @@ export default function LocalSetup() {
                     <TextInput 
                       style={styles.slimInput} 
                       placeholder="TEAM ALPHA" 
-                      placeholderTextColor="rgba(255,255,255,0.1)"
+                      placeholderTextColor={theme.colors.textMuted + '80'}
                       value={teamA}
                       onChangeText={setTeamA}
                       autoCapitalize="characters"
@@ -149,13 +149,13 @@ export default function LocalSetup() {
 
                   <View style={styles.slimInputCard}>
                     <View style={styles.inputLabelRow}>
-                      <View style={[styles.statusDot, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+                      <View style={[styles.statusDot, { backgroundColor: theme.colors.textMuted }]} />
                       <Text style={styles.slimLabel}>AWAY SQUAD</Text>
                     </View>
                     <TextInput 
                       style={styles.slimInput} 
                       placeholder="TEAM BETA" 
-                      placeholderTextColor="rgba(255,255,255,0.1)"
+                      placeholderTextColor={theme.colors.textMuted + '80'}
                       value={teamB}
                       onChangeText={setTeamB}
                       autoCapitalize="characters"
@@ -171,7 +171,7 @@ export default function LocalSetup() {
                       style={styles.inputElite} 
                       placeholder="20" 
                       keyboardType="numeric"
-                      placeholderTextColor="rgba(255,255,255,0.1)"
+                      placeholderTextColor={theme.colors.textMuted + '80'}
                       value={overs}
                       onChangeText={setOvers}
                     />
@@ -249,70 +249,75 @@ export default function LocalSetup() {
 }
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   scroll: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
-  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  backText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: theme.colors.border },
+  backText: { color: theme.colors.text, fontSize: 16, fontWeight: '700' },
   header: { marginBottom: 24, alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: -0.5 },
+  title: { fontSize: 24, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5 },
   subtitle: { fontSize: 7, fontWeight: '900', color: theme.colors.accent, letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
   form: { gap: 16 },
 
   // ─── Compact Squad Inputs ───
   squadInputsCompact: { gap: 8 },
   slimInputCard: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  slimLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5 },
-  slimInput: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
+  slimLabel: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1.5 },
+  slimInput: { fontSize: 18, fontWeight: '800', color: theme.colors.text, letterSpacing: -0.3 },
   vsCompactRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  vsLinePro: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
-  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginHorizontal: 16 },
+  vsLinePro: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, marginHorizontal: 16 },
   vsTextPro: { fontSize: 10, fontWeight: '900', color: theme.colors.accent, letterSpacing: 1.5 },
 
   eliteOptionGroup: { marginBottom: 32 },
   groupLabelElite: { 
     fontSize: 8, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.15)', 
+    color: theme.colors.textMuted, 
     letterSpacing: 2.5, 
     marginBottom: 20, 
     textTransform: 'uppercase' 
   },
   eliteGrid: { flexDirection: 'row', gap: 10 },
   eliteTypeSelector: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  eliteChip: { flex: 1, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center' },
+  eliteChip: { flex: 1, height: 48, borderRadius: 16, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
   eliteChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  eliteChipText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1 },
-  eliteChipTextActive: { color: '#000' },
+  eliteChipText: { fontSize: 10, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1 },
+  eliteChipTextActive: { color: '#FFF' },
   eliteSquadInputCard: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: theme.colors.border,
   },
   cardHeaderElite: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent },
-  labelElite: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2, textTransform: 'uppercase' },
+  labelElite: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2, textTransform: 'uppercase' },
   inputElite: { 
-    color: '#FFF', 
+    color: theme.colors.text, 
     fontSize: 18, 
     fontFamily: theme.typography.fontFamily.bold, 
     letterSpacing: -0.5
   },
   vsSeparatorRow: { flexDirection: 'row', alignItems: 'center', marginVertical: -8, zIndex: 10 },
-  vsLineElite: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.05)' },
-  vsCircleProfessional: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#000', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginHorizontal: 16 },
+  vsLineElite: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  vsCircleProfessional: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center', marginHorizontal: 16 },
   vsTextProfessional: { color: theme.colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   configRow: { flexDirection: 'row', gap: 12, marginTop: 8, marginBottom: 8 },
-  configItem: { flex: 1, backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
+  configItem: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: theme.colors.border },
   oversInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,31 +325,31 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   ballSelector: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   ballIcon: { fontSize: 20 },
-  ballText: { fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.6)', letterSpacing: 1 },
+  ballText: { fontSize: 11, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
   primaryBtn: { height: 56, borderRadius: 20, overflow: 'hidden', marginTop: 16 },
   btnInner: { flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 },
-  btnText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
+  btnText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
   tossSection: { alignItems: 'center', flex: 1, paddingTop: 10 },
   flipBtn: { width: '100%', height: 56, borderRadius: 20, overflow: 'hidden', marginTop: 24 },
-  flipBtnText: { color: '#000', fontSize: 14, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase' },
+  flipBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase' },
   resultArea: { width: '100%', alignItems: 'center', marginTop: 24 },
   winnerCard: { 
     width: '100%', 
-    backgroundColor: 'rgba(16, 185, 129, 0.05)', 
+    backgroundColor: 'rgba(46, 125, 50, 0.05)', 
     padding: 20, 
     borderRadius: 24, 
     alignItems: 'center', 
     borderWidth: 1, 
-    borderColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(46, 125, 50, 0.1)',
     marginBottom: 24 
   },
-  resultLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 },
-  winnerName: { fontSize: 32, fontWeight: '900', color: '#10B981', letterSpacing: -0.5 },
-  choiceLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.15)', letterSpacing: 3, marginBottom: 16, textTransform: 'uppercase' },
+  resultLabel: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 },
+  winnerName: { fontSize: 32, fontWeight: '900', color: '#2E7D32', letterSpacing: -0.5 },
+  choiceLabel: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 3, marginBottom: 16, textTransform: 'uppercase' },
   choiceRow: { flexDirection: 'row', gap: 10, width: '100%', marginBottom: 20 },
-  choiceBtn: { flex: 1, height: 74, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  choiceBtnSelected: { borderColor: theme.colors.accent, backgroundColor: 'rgba(255, 126, 95, 0.05)' },
+  choiceBtn: { flex: 1, height: 74, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  choiceBtnSelected: { borderColor: theme.colors.accent, backgroundColor: theme.colors.surfaceAlt },
   choiceIcon: { fontSize: 24 },
-  choiceText: { color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
+  choiceText: { color: theme.colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 2 },
   choiceTextSelected: { color: theme.colors.accent },
 });

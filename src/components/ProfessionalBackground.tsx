@@ -84,9 +84,9 @@ export const ProfessionalBackground: React.FC<ProfessionalBackgroundProps> = ({ 
         ]}
       />
 
-      {/* 5. Ambient Vignette */}
+      {/* 5. Ambient Vignette - Light Soft Glow instead of Dark shadow */}
       <View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.05)' }]}
         pointerEvents="none"
       />
 

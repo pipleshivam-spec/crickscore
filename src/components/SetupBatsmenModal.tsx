@@ -79,17 +79,17 @@ export const SetupBatsmenModal: React.FC<SetupBatsmenModalProps> = ({ visible, b
 };
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   content: { 
     backgroundColor: theme.colors.background, 
     borderTopLeftRadius: 40, 
     borderTopRightRadius: 40, 
     padding: 32, 
     borderWidth: 1, 
-    borderColor: theme.colors.glassBorder 
+    borderColor: theme.colors.border 
   },
   header: { alignItems: 'center', marginBottom: 32 },
-  handle: { width: 40, height: 4, backgroundColor: theme.colors.glassBorder, borderRadius: 2, marginBottom: 20 },
+  handle: { width: 40, height: 4, backgroundColor: theme.colors.border, borderRadius: 2, marginBottom: 20 },
   title: { fontSize: 24, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2 },
   subtitle: { fontSize: 9, fontWeight: '800', color: theme.colors.textMuted, letterSpacing: 1.5, marginTop: 4 },
   inputGroup: { marginBottom: 24 },
@@ -98,7 +98,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: theme.colors.glassBorder,
+    borderColor: theme.colors.border,
     height: 56,
     justifyContent: 'center',
     paddingHorizontal: 16,

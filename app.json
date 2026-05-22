@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -33,7 +33,14 @@
     },
     "scheme": "lazycricscore",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Allow LazyCricScore to access your microphone for voice scoring.",
+          "speechRecognitionPermission": "Allow LazyCricScore to recognize your voice commands for scoring."
+        }
+      ]
     ],
     "extra": {
       "router": {},

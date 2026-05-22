@@ -70,11 +70,11 @@ export const BowlerDisplay: React.FC<BowlerDisplayProps> = ({ bowlers = [], curr
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 32,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.colors.border,
     marginBottom: 24,
   },
   header: {
@@ -86,7 +86,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   headerLabel: {
     fontSize: 8,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.colors.textMuted,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -102,19 +102,19 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 16,
   },
   activeRow: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surfaceAlt,
   },
   nameCol: {
     flex: 1,
   },
   bowlerName: {
-    color: 'rgba(255,255,255,0.5)',
+    color: theme.colors.textMuted,
     fontSize: theme.typography.size.lg,
     fontFamily: theme.typography.fontFamily.semiBold,
     letterSpacing: theme.typography.letterSpacing.tight,
   },
   activeText: {
-    color: '#FFF',
+    color: theme.colors.text,
     fontFamily: theme.typography.fontFamily.bold,
   },
   statsSection: {
@@ -130,7 +130,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     textAlign: 'right',
   },
   statValue: {
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.colors.text,
     fontSize: theme.typography.size.md,
     fontFamily: theme.typography.fontFamily.bold,
   },

@@ -86,6 +86,19 @@ export default function MatchSetup() {
 
       await localDb.saveMatch(newMatch);
 
+      if (sessionId) {
+        const { error } = await supabase.from('matches').insert([{
+          id: matchId,
+          session_id: sessionId,
+          team_a: team1Name.trim(),
+          team_b: team2Name.trim(),
+          overs: overs,
+          status: 'live',
+          created_at: new Date().toISOString()
+        }]);
+        if (error) console.error('Error inserting online match:', error);
+      }
+
       if (selectedTournament) {
         const updatedTournament = {
           ...selectedTournament,
@@ -103,7 +116,7 @@ export default function MatchSetup() {
 
       router.push({
         pathname: '/toss',
-        params: { matchId, team1Name: team1Name.trim(), team2Name: team2Name.trim() }
+        params: { matchId, team1Name: team1Name.trim(), team2Name: team2Name.trim(), sessionId: sessionId || '' }
       });
 
     } catch (err: any) {
@@ -153,7 +166,7 @@ export default function MatchSetup() {
                   value={team1Name}
                   onChangeText={setTeam1Name}
                   placeholder="ENTER HOME SQUAD"
-                  placeholderTextColor="rgba(255,255,255,0.1)"
+                  placeholderTextColor={theme.colors.textMuted + '80'}
                   selectionColor={theme.colors.accent}
                   autoCapitalize="characters"
                 />
@@ -169,7 +182,7 @@ export default function MatchSetup() {
 
               <View style={styles.slimInputCard}>
                 <View style={styles.inputLabelRow}>
-                  <View style={[styles.statusDot, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+                  <View style={[styles.statusDot, { backgroundColor: theme.colors.textMuted }]} />
                   <Text style={styles.slimLabel}>AWAY SQUAD</Text>
                 </View>
                 <TextInput
@@ -177,7 +190,7 @@ export default function MatchSetup() {
                   value={team2Name}
                   onChangeText={setTeam2Name}
                   placeholder="ENTER AWAY SQUAD"
-                  placeholderTextColor="rgba(255,255,255,0.1)"
+                  placeholderTextColor={theme.colors.textMuted + '80'}
                   selectionColor={theme.colors.accent}
                   autoCapitalize="characters"
                 />
@@ -256,7 +269,7 @@ export default function MatchSetup() {
           <View style={styles.stepContainer}>
             <Text style={styles.sectionTitle}>MATCH TICKET VERIFICATION</Text>
             <View style={styles.ticketCard}>
-              <View style={[styles.ticketInner, { backgroundColor: '#0f172a' }]}>
+              <View style={[styles.ticketInner, { backgroundColor: theme.colors.surfaceAlt }]}>
                 <View style={styles.ticketHeader}>
                   <View>
                     <Text style={styles.ticketBranding}>LAZYCRIC PRO</Text>
@@ -320,6 +333,7 @@ export default function MatchSetup() {
 
   return (
     <View style={styles.container}>
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -334,7 +348,7 @@ export default function MatchSetup() {
                 <View style={[styles.progressFill, { width: `${progress}%` }]} />
               </View>
               <Text style={styles.stepCounter}>
-                STEP 0{step} <Text style={{ color: 'rgba(255,255,255,0.2)' }}>/ 03</Text>
+                STEP 0{step} <Text style={{ color: theme.colors.textMuted }}>/ 03</Text>
               </Text>
             </View>
           </View>
@@ -368,11 +382,11 @@ export default function MatchSetup() {
                 style={[styles.btnInner, { backgroundColor: theme.colors.accent }]}
               >
                 {loading ? (
-                  <ActivityIndicator color="#000" />
+                  <ActivityIndicator color="#FFF" />
                 ) : (
                   <>
-                    <Text style={styles.btnText}>{step === 3 ? 'INITIALIZE ENGINE' : 'CONTINUE'}</Text>
-                    <Text style={styles.btnIcon}>→</Text>
+                    <Text style={[styles.btnText, { color: '#FFF' }]}>{step === 3 ? 'INITIALIZE ENGINE' : 'CONTINUE'}</Text>
+                    <Text style={[styles.btnIcon, { color: '#FFF' }]}>→</Text>
                   </>
                 )}
               </View>
@@ -385,116 +399,116 @@ export default function MatchSetup() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   content: { flex: 1 },
   header: { padding: 24, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
-  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  backIcon: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  backBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: theme.colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  backIcon: { color: theme.colors.text, fontSize: 16, fontWeight: '700' },
   progressWrapper: { flex: 1, marginLeft: 20 },
-  progressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
+  progressBar: { height: 4, backgroundColor: theme.colors.border, borderRadius: 2, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: '100%', backgroundColor: theme.colors.accent },
   stepCounter: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2, textTransform: 'uppercase' },
   scroll: { flexGrow: 1, paddingBottom: 60 },
   titleSection: { paddingHorizontal: 24, marginBottom: 20 },
-  mainTitle: { fontSize: 24, fontWeight: '900', color: '#FFF', letterSpacing: -0.5 },
-  mainSub: { fontSize: 7, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
-
+  mainTitle: { fontSize: 24, fontWeight: '900', color: theme.colors.text, letterSpacing: -0.5 },
+  mainSub: { fontSize: 7, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 3, marginTop: 4, textTransform: 'uppercase' },
+ 
   stepContainer: { paddingHorizontal: 24, gap: 16 },
   sectionTitle: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 3, marginBottom: 4, textTransform: 'uppercase' },
-
+ 
   tourSelector: { flexDirection: 'row', marginBottom: 12 },
-  tourChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  tourChipActive: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: theme.colors.accent },
-  tourChipText: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.3)', letterSpacing: 1 },
+  tourChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, marginRight: 8, borderWidth: 1, borderColor: theme.colors.border },
+  tourChipActive: { backgroundColor: 'rgba(162, 28, 60, 0.05)', borderColor: theme.colors.accent },
+  tourChipText: { fontSize: 9, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1 },
   tourChipTextActive: { color: theme.colors.accent },
-
+ 
   squadInputsCompact: { gap: 8 },
   slimInputCard: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
   },
   inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  slimLabel: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 1.5 },
-  slimInput: { fontSize: 18, fontWeight: '800', color: '#FFF', letterSpacing: -0.3 },
+  slimLabel: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1.5 },
+  slimInput: { fontSize: 18, fontWeight: '800', color: theme.colors.text, letterSpacing: -0.3 },
   vsCompactRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  vsLinePro: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.03)' },
-  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', marginHorizontal: 16 },
+  vsLinePro: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  vsChipPro: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, marginHorizontal: 16 },
   vsTextPro: { fontSize: 10, fontWeight: '900', color: theme.colors.accent, letterSpacing: 1.5 },
-
+ 
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.accent },
   eliteOptionGroup: { marginBottom: 24 },
-  groupLabelElite: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2.5, marginBottom: 12, textTransform: 'uppercase' },
+  groupLabelElite: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2.5, marginBottom: 12, textTransform: 'uppercase' },
   eliteGrid: { flexDirection: 'row', gap: 10 },
-  eliteChip: { flex: 1, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' },
+  eliteChip: { flex: 1, height: 44, borderRadius: 12, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
   eliteChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  eliteChipText: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.5)', letterSpacing: 1 },
-  eliteChipTextActive: { color: '#000' },
-  activeIndicator: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: '#000' },
-
+  eliteChipText: { fontSize: 10, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1 },
+  eliteChipTextActive: { color: '#FFF' },
+  activeIndicator: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFF' },
+ 
   oversGridElite: { flexDirection: 'row', gap: 10 },
-  overBoxElite: { flex: 1, height: 64, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' },
-  overBoxActive: { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: theme.colors.accent, borderWidth: 2 },
-  overValElite: { fontSize: 18, fontWeight: '900', color: '#FFF' },
+  overBoxElite: { flex: 1, height: 64, borderRadius: 16, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
+  overBoxActive: { backgroundColor: theme.colors.surface, borderColor: theme.colors.accent, borderWidth: 2 },
+  overValElite: { fontSize: 18, fontWeight: '900', color: theme.colors.text },
   overValActive: { color: theme.colors.accent },
-  overSubElite: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', letterSpacing: 1 },
+  overSubElite: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1 },
   overSubActive: { color: theme.colors.accent },
-
+ 
   conditionRow: { flexDirection: 'row', gap: 12 },
-  conditionItem: { flex: 1, backgroundColor: 'rgba(255,255,255,0.01)', borderRadius: 20, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
-  conditionLabel: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', letterSpacing: 1.5, marginBottom: 10 },
+  conditionItem: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: theme.colors.border },
+  conditionLabel: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, letterSpacing: 1.5, marginBottom: 10 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
+  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border },
   pillActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  pillText: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.5)' },
-  pillTextActive: { color: '#000' },
-
-  ticketCard: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.01)' },
+  pillText: { fontSize: 9, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted },
+  pillTextActive: { color: '#FFF' },
+ 
+  ticketCard: { borderRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   ticketInner: { padding: 32 },
   ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
   ticketBranding: { fontSize: 14, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.accent, letterSpacing: 3 },
-  ticketMatchId: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.1)', marginTop: 4 },
+  ticketMatchId: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, marginTop: 4 },
   broadcastBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(16, 185, 129, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   broadcastDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#10B981' },
   broadcastText: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: '#10B981', letterSpacing: 0.5 },
   ticketMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
   ticketTeamBox: { flex: 1 },
-  ticketTeamName: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: '#FFF', letterSpacing: -0.5 },
-  ticketTeamRole: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginTop: 2, letterSpacing: 1, textTransform: 'uppercase' },
+  ticketTeamName: { fontSize: 18, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text, letterSpacing: -0.5 },
+  ticketTeamRole: { fontSize: 8, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, marginTop: 2, letterSpacing: 1, textTransform: 'uppercase' },
   ticketVSBox: { width: 40, alignItems: 'center' },
-  ticketVSText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)' },
+  ticketVSText: { fontSize: 10, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted },
   ticketDividerRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: -32, marginBottom: 32 },
-  ticketCut: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#000', marginLeft: -10 },
+  ticketCut: { width: 20, height: 20, borderRadius: 10, backgroundColor: theme.colors.background, marginLeft: -10 },
   ticketCutRight: { marginLeft: 0, marginRight: -10 },
-  ticketDash: { flex: 1, height: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)', borderStyle: 'dashed' },
+  ticketDash: { flex: 1, height: 1, borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed' },
   ticketFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   footerItem: { alignItems: 'center' },
-  footerLab: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: 'rgba(255,255,255,0.15)', marginBottom: 4, letterSpacing: 1 },
-  footerVal: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: '#FFF' },
-
+  footerLab: { fontSize: 7, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.textMuted, marginBottom: 4, letterSpacing: 1 },
+  footerVal: { fontSize: 11, fontFamily: theme.typography.fontFamily.bold, color: theme.colors.text },
+ 
   footer: { padding: 24 },
   primaryBtn: { height: 72, borderRadius: 24, overflow: 'hidden' },
   btnInner: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
   btnText: { color: '#000', fontSize: 16, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 1, textTransform: 'uppercase' },
   btnIcon: { color: '#000', fontSize: 18, fontFamily: theme.typography.fontFamily.bold },
   disabledBtn: { opacity: 0.5 },
-
+ 
   hintBox: {
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: theme.colors.border,
   },
   hintText: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
+    color: theme.colors.textMuted,
     letterSpacing: 0.5,
     lineHeight: 16,
   },

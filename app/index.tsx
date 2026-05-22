@@ -64,6 +64,12 @@ export default function Home() {
     } catch (err) { console.error(err); }
   };
 
+  const getActiveInnings = () => {
+    const match = activeSession?.matches?.[0];
+    if (!match) return null;
+    return match.innings?.find((i: any) => i.status === 'active') || match.innings?.[match.innings.length - 1] || match.innings?.[0];
+  };
+
   const handleResume = (item?: any) => {
     const target = item || activeSession?.matches?.[0];
     if (!target) return;
@@ -99,8 +105,8 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.glowBall, { backgroundColor: '#10B981', top: -100, left: -100 }]} />
-      <View style={[styles.glowBall, { backgroundColor: '#3B82F6', bottom: -100, right: -100 }]} />
+      <View style={[styles.glowBall, { backgroundColor: theme.colors.accent + '15', top: -100, left: -100 }]} />
+      <View style={[styles.glowBall, { backgroundColor: theme.colors.accentSecondary + '10', bottom: -100, right: -100 }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -133,7 +139,7 @@ export default function Home() {
               {activeSession ? (
                 <TouchableOpacity style={styles.liveMatchCard} onPress={() => handleResume()} activeOpacity={0.9}>
                   <LinearGradient 
-                    colors={['rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.05)']} 
+                    colors={['rgba(162, 28, 60, 0.1)', 'rgba(162, 28, 60, 0.02)']} 
                     style={styles.cardInner}
                   >
                     <View style={styles.cardHeader}>
@@ -150,8 +156,9 @@ export default function Home() {
                           {(activeSession.matches?.[0]?.teamA || activeSession.matches?.[0]?.team_a)} vs {(activeSession.matches?.[0]?.teamB || activeSession.matches?.[0]?.team_b)}
                         </Text>
                         <Text style={styles.liveScoreMini}>
-                          {activeSession.matches?.[0]?.innings?.[0]?.total_runs || 0}/{activeSession.matches?.[0]?.innings?.[0]?.total_wickets || 0}
-                          <Text style={{ opacity: 0.4 }}> ({Math.floor((activeSession.matches?.[0]?.innings?.[0]?.total_balls || 0) / 6)}.{ (activeSession.matches?.[0]?.innings?.[0]?.total_balls || 0) % 6 } ov)</Text>
+                          {getActiveInnings()?.total_runs || 0}/{getActiveInnings()?.total_wickets || 0}
+                          <Text style={{ opacity: 0.4 }}> ({Math.floor((getActiveInnings()?.total_balls || 0) / 6)}.{ (getActiveInnings()?.total_balls || 0) % 6 } ov)</Text>
+                          {getActiveInnings()?.innings_number === 2 && <Text style={{ fontSize: 10, color: theme.colors.textMuted }}> • 2nd Innings</Text>}
                         </Text>
                       </View>
                       <View style={styles.resumeBtn}>
@@ -163,7 +170,7 @@ export default function Home() {
               ) : (
                 <View style={styles.emptyCard}>
                   <LinearGradient 
-                    colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']} 
+                    colors={[theme.colors.surface, theme.colors.surfaceAlt]} 
                     style={styles.cardInner}
                   >
                     <Text style={styles.emptyText}>No active matches. Ready for a new game?</Text>
@@ -174,19 +181,19 @@ export default function Home() {
 
             <View style={styles.statsBento}>
               <View style={styles.bentoSmall}>
-                <View style={[styles.bentoInner, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(162, 28, 60, 0.05)' }]}>
                   <Text style={styles.bentoVal}>{stats.matches}</Text>
                   <Text style={styles.bentoLabel}>GAMES</Text>
                 </View>
               </View>
               <View style={styles.bentoSmall}>
-                <View style={[styles.bentoInner, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(46, 125, 50, 0.05)' }]}>
                   <Text style={styles.bentoVal}>{stats.runs}</Text>
                   <Text style={styles.bentoLabel}>TOTAL RUNS</Text>
                 </View>
               </View>
               <View style={styles.bentoSmall}>
-                <View style={[styles.bentoInner, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <View style={[styles.bentoInner, { backgroundColor: 'rgba(245, 158, 11, 0.05)' }]}>
                   <Text style={styles.bentoVal}>{stats.wickets}</Text>
                   <Text style={styles.bentoLabel}>WICKETS</Text>
                 </View>
@@ -195,7 +202,7 @@ export default function Home() {
 
             <View style={styles.actionsGrid}>
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/create')} activeOpacity={0.8}>
-                    <View style={[styles.gridInner, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                    <View style={[styles.gridInner, { backgroundColor: 'rgba(162, 28, 60, 0.05)' }]}>
                       <Text style={styles.gridIcon}>🏆</Text>
                       <Text style={styles.gridTitle}>LOCAL MATCH</Text>
                       <Text style={styles.gridSub}>QUICK START</Text>
@@ -203,15 +210,15 @@ export default function Home() {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/tournaments')} activeOpacity={0.8}>
-                <View style={[styles.gridInner, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                  <Text style={styles.gridIcon}>📊</Text>
+                <View style={[styles.gridInner, { backgroundColor: 'rgba(245, 158, 11, 0.05)' }]}>
+                  <Text style={styles.gridIcon}>🏆</Text>
                   <Text style={styles.gridTitle}>TOURNAMENTS</Text>
                   <Text style={styles.gridSub}>LEAGUE MODE</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/join')} activeOpacity={0.8}>
-                    <View style={[styles.gridInner, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                    <View style={[styles.gridInner, { backgroundColor: 'rgba(46, 125, 50, 0.05)' }]}>
                       <Text style={styles.gridIcon}>📶</Text>
                       <Text style={styles.gridTitle}>JOIN LIVE</Text>
                       <Text style={styles.gridSub}>SYNC BY CODE</Text>
@@ -219,8 +226,8 @@ export default function Home() {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.gridBtn} onPress={() => router.push('/local-setup')} activeOpacity={0.8}>
-                    <View style={[styles.gridInner, { backgroundColor: '#1e293b' }]}>
-                      <Text style={styles.gridIcon}>📶</Text>
+                    <View style={[styles.gridInner, { backgroundColor: theme.colors.surfaceAlt }]}>
+                      <Text style={styles.gridIcon}>🎾</Text>
                       <Text style={styles.gridTitle}>OFFLINE MODE</Text>
                       <Text style={styles.gridSub}>NO INTERNET</Text>
                     </View>
@@ -270,7 +277,7 @@ export default function Home() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   glowBall: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.15 },
   safeArea: { flex: 1, paddingTop: 10 },
   scroll: { flexGrow: 1 },
@@ -291,8 +298,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: 48,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   titleWrapper: {
     justifyContent: 'center',
@@ -300,7 +307,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   title: { 
     fontSize: 22, 
     fontWeight: '900', 
-    color: '#FFF', 
+    color: theme.colors.text, 
     letterSpacing: -0.5,
   },
   subtitle: {
@@ -315,18 +322,18 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 44, 
     height: 44, 
     borderRadius: 16, 
-    backgroundColor: 'rgba(255,255,255,0.03)', 
+    backgroundColor: theme.colors.surfaceAlt, 
     alignItems: 'center', 
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: theme.colors.border,
   },
   profileEmoji: { fontSize: 16 },
   mainHub: { marginBottom: 32 },
   hubLabel: {
     fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.2)',
+    color: theme.colors.textMuted,
     letterSpacing: 3,
     marginBottom: 16,
     paddingHorizontal: 4,
@@ -337,16 +344,16 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 32,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.01)'
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface
   },
   emptyCard: {
     height: 100,
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
-    backgroundColor: 'rgba(255,255,255,0.01)'
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface
   },
   cardInner: {
     flex: 1,
@@ -376,7 +383,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginRight: 6,
   },
   liveText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
-  matchType: { fontSize: 9, fontWeight: '900', color: 'rgba(255,255,255,0.25)', letterSpacing: 1.5 },
+  matchType: { fontSize: 9, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 1.5 },
   matchInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -385,7 +392,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   teamsText: { 
     fontSize: 20, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: '#FFF', 
+    color: theme.colors.text, 
     flex: 1,
     letterSpacing: -0.5,
   },
@@ -398,7 +405,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   resumeBtnText: { 
     fontSize: 10, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: '#000',
+    color: '#FFF',
     letterSpacing: 0.5,
   },
   liveScoreMini: {
@@ -407,7 +414,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.colors.accent,
     marginTop: 2,
   },
-  emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  emptyText: { color: theme.colors.textMuted, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 
   statsBento: {
     flexDirection: 'row',
@@ -419,9 +426,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: 84,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.colors.border,
   },
   bentoInner: {
     flex: 1,
@@ -431,13 +438,13 @@ const createStyles = (theme: any) => StyleSheet.create({
   bentoVal: {
     fontSize: 24,
     fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
+    color: theme.colors.text,
     letterSpacing: -0.5,
   },
   bentoLabel: {
     fontSize: 7,
     fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.2)',
+    color: theme.colors.textMuted,
     letterSpacing: 1.5,
     marginTop: 4,
     textTransform: 'uppercase',
@@ -454,8 +461,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
-    backgroundColor: 'rgba(255,255,255,0.01)'
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface
   },
   gridInner: {
     flex: 1,
@@ -469,20 +476,20 @@ const createStyles = (theme: any) => StyleSheet.create({
   gridTitle: {
     fontSize: 14,
     fontFamily: theme.typography.fontFamily.bold,
-    color: '#FFF',
+    color: theme.colors.text,
     letterSpacing: 0,
   },
   gridSub: {
     fontSize: 8,
     fontFamily: theme.typography.fontFamily.bold,
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.colors.textMuted,
     marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
 
   footer: { alignItems: 'center', paddingBottom: 40 },
-  footerText: { fontSize: 9, color: 'rgba(255,255,255,0.3)', fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
+  footerText: { fontSize: 9, color: theme.colors.textMuted, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 2 },
   footerSub: { fontSize: 8, color: theme.colors.accent, opacity: 0.4, fontFamily: theme.typography.fontFamily.bold, letterSpacing: 3, marginTop: 4 },
   resetBtn: {
     marginTop: 24,

@@ -1,28 +1,28 @@
 export const theme = {
   colors: {
-    background: '#04070B', // Even deeper black
-    surface: '#0F131A',    // Deep slate
-    surfaceAlt: '#1A1F26', 
-    accent: '#FF7E5F',     // Vibrant sunset orange
-    accentSecondary: '#FEB47B', // Lighter peach
-    success: '#00F5A0',    // Neon mint
-    danger: '#FF416C',     // Vivid red
-    warning: '#FDC830',    // Bright gold
-    text: '#F8FAFC',
-    textMuted: '#94A3B8',
-    border: '#1E293B',
-    glass: 'rgba(255, 255, 255, 0.03)',
-    glassBorder: 'rgba(255, 255, 255, 0.08)',
+    background: '#F4F4F3',
+    surface: '#FFFFFF',
+    surfaceAlt: '#EAE9E6',
+    accent: '#A21C3C',
+    accentSecondary: '#8DCBE6',
+    success: '#2E7D32',
+    danger: '#A21C3C',
+    warning: '#F6C47A',
+    text: '#111111',
+    textMuted: '#7A7A7A',
+    border: '#E0DFDB',
+    glass: 'rgba(0, 0, 0, 0.02)',
+    glassBorder: 'rgba(0, 0, 0, 0.06)',
     white: '#FFFFFF',
     black: '#000000',
-    gradientStart: '#000428', // Deep night blue
-    gradientEnd: '#004e92',
+    gradientStart: '#FFFFFF',
+    gradientEnd: '#F4F4F3',
     
     // Action Specifics
-    four: '#4facfe',
-    six: '#f093fb',
-    wicket: '#FF416C',
-    extra: '#94A3B8',
+    four: '#8DCBE6',
+    six: '#A21C3C',
+    wicket: '#A21C3C',
+    extra: '#7A7A7A',
   },
   spacing: {
     xs: 4,

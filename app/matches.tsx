@@ -170,7 +170,7 @@ export default function MatchesHistory() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[theme.colors.background, '#000']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -193,7 +193,7 @@ export default function MatchesHistory() {
             matches.map((m, idx) => <MatchItem key={m.id} m={m} index={idx} />)
           ) : (
             <View style={styles.emptyBox}>
-              <LinearGradient colors={['rgba(255,255,255,0.02)', 'transparent']} style={styles.emptyInner}>
+              <LinearGradient colors={[theme.colors.surface, 'transparent']} style={styles.emptyInner}>
                 <Text style={styles.emptyIcon}>🏟️</Text>
                 <Text style={styles.emptyText}>NO ARCHIVES FOUND</Text>
                 <Text style={styles.emptySub}>Initialize your first session to begin tracking history</Text>
@@ -208,13 +208,13 @@ export default function MatchesHistory() {
 }
 
 const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1, paddingTop: 10 },
   header: { padding: 32, paddingBottom: 24 },
   title: { 
     fontSize: 32, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: '#FFF', 
+    color: theme.colors.text, 
     letterSpacing: -1 
   },
   subtitle: { 
@@ -227,7 +227,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   scroll: { paddingHorizontal: 20, paddingBottom: 120 },
   arenaInfo: { 
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 24,
     padding: 24,
     flexDirection: 'row', 
@@ -235,20 +235,30 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center', 
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)'
+    borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  arenaStatTitle: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.2)', letterSpacing: 2 },
-  arenaStatVal: { fontSize: 32, fontWeight: '900', color: '#FFF', letterSpacing: -1 },
+  arenaStatTitle: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted, letterSpacing: 2 },
+  arenaStatVal: { fontSize: 32, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
   loadingBox: { marginTop: 100, alignItems: 'center' },
-  statusText: { color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 24, fontWeight: '900', fontSize: 9, letterSpacing: 3 },
+  statusText: { color: theme.colors.textMuted, textAlign: 'center', marginTop: 24, fontWeight: '900', fontSize: 9, letterSpacing: 3 },
   
   matchCardContainer: { marginBottom: 20 },
   matchCard: { 
     borderRadius: 24, 
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)'
+    borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardInner: { padding: 24 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
@@ -256,18 +266,18 @@ const createStyles = (theme: any) => StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeLocal: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.2)' },
   badgeCloud: { backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' },
-  badgeText: { fontSize: 7, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  badgeText: { fontSize: 7, fontWeight: '900', color: theme.colors.text, letterSpacing: 1 },
   liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#EF4444' },
   liveText: { fontSize: 7, fontWeight: '900', color: '#EF4444', letterSpacing: 1 },
-  dateText: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.2)', letterSpacing: 0.5 },
+  dateText: { fontSize: 10, fontWeight: '800', color: theme.colors.textMuted, letterSpacing: 0.5 },
   
   teamsSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   teamEntry: { flex: 1 },
   teamName: { 
     fontSize: 18, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: '#FFF', 
+    color: theme.colors.text, 
     letterSpacing: -0.5
   },
   teamScore: { 
@@ -278,37 +288,37 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   vsCircle: { 
     width: 32, height: 32, borderRadius: 16, 
-    backgroundColor: 'rgba(255,255,255,0.05)', 
+    backgroundColor: theme.colors.surfaceAlt, 
     alignItems: 'center', justifyContent: 'center', 
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', 
+    borderWidth: 1, borderColor: theme.colors.border, 
     marginHorizontal: 16 
   },
-  vsText: { fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)' },
+  vsText: { fontSize: 8, fontWeight: '900', color: theme.colors.textMuted },
   
   cardFooter: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingTop: 16, 
     borderTopWidth: 1, 
-    borderTopColor: 'rgba(255,255,255,0.03)' 
+    borderTopColor: theme.colors.border 
   },
   matchMeta: { flexDirection: 'row', gap: 12 },
   metaLabel: { 
     fontSize: 8, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.3)', 
+    color: theme.colors.textMuted, 
     letterSpacing: 1 
   },
   metaVal: { 
     fontSize: 10, 
     fontFamily: theme.typography.fontFamily.bold, 
-    color: 'rgba(255,255,255,0.6)', 
+    color: theme.colors.text, 
   },
   miniDelete: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(239, 68, 68, 0.03)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.05)' },
   miniDeleteText: { fontSize: 8, fontWeight: '900', color: '#EF4444', letterSpacing: 0.5 },
-  emptyBox: { marginTop: 40, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' },
+  emptyBox: { marginTop: 40, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed' },
   emptyInner: { padding: 48, alignItems: 'center' },
   emptyIcon: { fontSize: 40, marginBottom: 16, opacity: 0.3 },
-  emptyText: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 2, opacity: 0.8 },
-  emptySub: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '700', marginTop: 12, textAlign: 'center', lineHeight: 18 },
+  emptyText: { color: theme.colors.text, fontSize: 13, fontWeight: '900', letterSpacing: 2, opacity: 0.8 },
+  emptySub: { color: theme.colors.textMuted, fontSize: 10, fontWeight: '700', marginTop: 12, textAlign: 'center', lineHeight: 18 },
 });

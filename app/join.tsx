@@ -3,12 +3,14 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
-import { theme } from '../src/theme';
+import { useAppTheme } from '../src/theme/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function JoinSession() {
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,24 +22,53 @@ export default function JoinSession() {
 
     try {
       setLoading(true);
+
+      // Accept sessions in both 'waiting' and 'active' state
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
         .eq('code', code.toUpperCase())
-        .eq('status', 'waiting')
+        .in('status', ['waiting', 'active'])
         .single();
 
       if (error || !data) {
-        Alert.alert('ACCESS DENIED', 'Invalid or expired node code. Please verify with the host.');
+        Alert.alert(
+          'CODE NOT FOUND',
+          'No live session found with this code.\n\n' +
+          '• Make sure the host created an ONLINE match (not local)\n' +
+          '• The code is case-insensitive\n' +
+          '• Ask the host to re-share the code',
+          [{ text: 'GOT IT', style: 'default' }]
+        );
         return;
       }
 
+      // If the session is already active, go straight to scoring view
+      if (data.status === 'active') {
+        router.replace({
+          pathname: '/scoring',
+          params: {
+            sessionId: data.id,
+            role: 'viewer',
+            isLocal: 'false',
+            matchId: data.match_id,
+            inningsId: data.innings_id,
+          },
+        });
+        return;
+      }
+
+      // Otherwise, go to lobby to wait for host to start the match
       router.push({
         pathname: '/lobby',
         params: { sessionId: data.id, code: data.code, role: 'viewer' }
       });
     } catch (err) {
-      Alert.alert('ERROR', 'Elite cloud sync failed. Check your connection.');
+      Alert.alert(
+        'CONNECTION ERROR',
+        'Could not reach the server. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -45,7 +76,7 @@ export default function JoinSession() {
 
   return (
     <View style={styles.container}>
-      {/* Global ProfessionalBackground provides the depth here */}
+      <LinearGradient colors={[theme.colors.background, theme.colors.surfaceAlt]} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -59,6 +90,10 @@ export default function JoinSession() {
               <Text style={styles.badgeText}>ELITE BROADCAST SYNC</Text>
             </View>
             <Text style={styles.subtitle}>Enter the 6-character match code to join the live scoring broadcast.</Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoIcon}>ℹ️</Text>
+              <Text style={styles.infoText}>This requires the host to create an <Text style={styles.infoBold}>Online Match</Text> (not a local match) and share their session code.</Text>
+            </View>
           </View>
 
           <View style={styles.inputSection}>
@@ -112,32 +147,46 @@ export default function JoinSession() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+const createStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
   safeArea: { flex: 1 },
   content: { flex: 1, padding: 32, justifyContent: 'space-between' },
   backBtn: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: theme.colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.colors.border,
   },
   backIcon: { color: theme.colors.text, fontSize: 18 },
   header: { marginTop: 20 },
   title: { fontSize: 36, fontWeight: '900', color: theme.colors.text, letterSpacing: -1 },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 8,
+  },
+  infoIcon: { fontSize: 14 },
+  infoText: { flex: 1, fontSize: 12, color: theme.colors.textMuted, lineHeight: 18, fontWeight: '500' },
+  infoBold: { fontWeight: '900', color: theme.colors.text },
   badge: {
-    backgroundColor: 'rgba(255, 126, 95, 0.1)',
+    backgroundColor: 'rgba(162, 28, 60, 0.05)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
     marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 126, 95, 0.2)',
+    borderColor: 'rgba(162, 28, 60, 0.1)',
   },
   badgeText: { fontSize: 8, fontWeight: '900', color: theme.colors.accent, letterSpacing: 2 },
   subtitle: { fontSize: 14, color: theme.colors.textMuted, marginTop: 16, lineHeight: 22, fontWeight: '500' },
@@ -151,16 +200,16 @@ const styles = StyleSheet.create({
   codeBox: {
     flex: 1,
     height: 60,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: theme.colors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   codeBoxFilled: {
     borderColor: theme.colors.accent,
-    backgroundColor: 'rgba(255, 126, 95, 0.05)',
+    backgroundColor: 'rgba(162, 28, 60, 0.05)',
   },
   codeChar: { fontSize: 24, fontWeight: '900', color: theme.colors.text },
   hiddenInput: {
@@ -177,7 +226,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: { width: '100%', alignItems: 'center', gap: 20 },
-  joinBtn: { width: '100%', height: 64, borderRadius: 24, overflow: 'hidden', ...theme.shadows.glow },
+  joinBtn: { width: '100%', height: 64, borderRadius: 24, overflow: 'hidden' },
   btnInner: { 
     flex: 1, 
     flexDirection: 'row', 
@@ -188,5 +237,5 @@ const styles = StyleSheet.create({
   joinText: { color: theme.colors.background, fontSize: 18, fontWeight: '900', letterSpacing: 1 },
   joinIcon: { color: theme.colors.background, fontSize: 22, fontWeight: '900' },
   disabledBtn: { opacity: 0.4 },
-  versionText: { fontSize: 8, color: 'rgba(255,255,255,0.2)', fontWeight: '800', letterSpacing: 2 },
+  versionText: { fontSize: 8, color: theme.colors.textMuted, fontWeight: '800', letterSpacing: 2 },
 });

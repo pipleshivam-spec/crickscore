@@ -12,6 +12,7 @@ const { width } = Dimensions.get('window');
 export default function CareerVault() {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
+  const [statsOverview, setStatsOverview] = React.useState({ topScorer: null, topWicketTaker: null });
   const [players, setPlayers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -93,7 +94,7 @@ export default function CareerVault() {
               {/* Top Scorer Card */}
               <LinearGradient colors={[theme.colors.surface, theme.colors.surfaceAlt]} style={styles.legendCardHalf}>
                 <Text style={styles.legendLabel}>🏏 MOST RUNS</Text>
-                {statsOverview.topScorer && (statsOverview.topScorer.runs || 0) > 0 ? (
+                {(statsOverview?.topScorer?.runs || 0) > 0 ? (
                   <View style={styles.legendContentHalf}>
                     <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.accent }]}>
                       <Text style={styles.legendInitialSmall}>{statsOverview.topScorer.name[0]?.toUpperCase()}</Text>
@@ -112,7 +113,7 @@ export default function CareerVault() {
               {/* Top Wicket Taker Card */}
               <LinearGradient colors={[theme.colors.surface, theme.colors.surfaceAlt]} style={styles.legendCardHalf}>
                 <Text style={styles.legendLabel}>⚡ MOST WICKETS</Text>
-                {statsOverview.topWicketTaker && (statsOverview.topWicketTaker.wickets || 0) > 0 ? (
+                {(statsOverview?.topWicketTaker?.wickets || 0) > 0 ? (
                   <View style={styles.legendContentHalf}>
                     <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.success || '#2E7D32' }]}>
                       <Text style={styles.legendInitialSmall}>{statsOverview.topWicketTaker.name[0]?.toUpperCase()}</Text>

@@ -1,4 +1,21 @@
 import React, { useState, useEffect } from 'react';
+
+// Simple type definitions for a player record
+type Player = {
+  id: string;
+  name: string;
+  runs: number;
+  wickets: number;
+  matches: number;
+  balls?: number;
+};
+
+// Simple type definitions for overview stats
+type StatsOverview = {
+  totalPlayers: number;
+  topScorer: Player | null;
+  topWicketTaker: Player | null;
+};
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,15 +29,19 @@ const { width } = Dimensions.get('window');
 export default function CareerVault() {
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
-  const [statsOverview, setStatsOverview] = React.useState({ topScorer: null, topWicketTaker: null });
+  const [statsOverview, setStatsOverview] = React.useState<StatsOverview>({ totalPlayers: 0, topScorer: null, topWicketTaker: null });
   const [players, setPlayers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'runs' | 'wickets' | 'matches'>('runs');
 
-  useEffect(() => {
-    loadPlayers();
-  }, []);
+    useEffect(() => {
+    // Compute summary stats whenever the player list changes
+    const totalPlayers = players.length;
+    const topScorer = totalPlayers > 0 ? [...players].sort((a, b) => (b.runs || 0) - (a.runs || 0))[0] : null;
+    const topWicketTaker = totalPlayers > 0 ? [...players].sort((a, b) => (b.wickets || 0) - (a.wickets || 0))[0] : null;
+    setStatsOverview({ totalPlayers, topScorer, topWicketTaker });
+  }, [players]);
 
   const loadPlayers = async () => {
     try {
@@ -33,6 +54,12 @@ export default function CareerVault() {
       setLoading(false);
     }
   };
+
+  // Load players on component mount
+  useEffect(() => {
+    loadPlayers();
+  }, []);
+
 
   const handleDeletePlayer = async (id: string, name: string) => {
     Alert.alert(
@@ -56,11 +83,7 @@ export default function CareerVault() {
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => (b[sortBy] || 0) - (a[sortBy] || 0));
 
-  const statsOverview = {
-    totalPlayers: players.length,
-    topScorer: players.length > 0 ? [...players].sort((a, b) => (b.runs || 0) - (a.runs || 0))[0] : null,
-    topWicketTaker: players.length > 0 ? [...players].sort((a, b) => (b.wickets || 0) - (a.wickets || 0))[0] : null,
-  };
+  
 
   if (loading) {
     return (
@@ -97,12 +120,12 @@ export default function CareerVault() {
                 {(statsOverview?.topScorer?.runs || 0) > 0 ? (
                   <View style={styles.legendContentHalf}>
                     <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.accent }]}>
-                      <Text style={styles.legendInitialSmall}>{statsOverview.topScorer.name[0]?.toUpperCase()}</Text>
+                      <Text style={styles.legendInitialSmall}>{statsOverview.topScorer?.name?.[0]?.toUpperCase() ?? ''}</Text>
                     </View>
                     <View style={styles.legendTextContainer}>
-                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topScorer.name || 'PLAYER').toUpperCase()}</Text>
-                      <Text style={styles.legendStatsSmall}>{statsOverview.topScorer.runs} RUNS</Text>
-                      <Text style={styles.legendMatchesSmall}>{statsOverview.topScorer.matches} MATCHES</Text>
+                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topScorer?.name || 'PLAYER').toUpperCase()}</Text>
+                      <Text style={styles.legendStatsSmall}>{statsOverview.topScorer?.runs ?? 0} RUNS</Text>
+                      <Text style={styles.legendMatchesSmall}>{statsOverview.topScorer?.matches ?? 0} MATCHES</Text>
                     </View>
                   </View>
                 ) : (
@@ -116,12 +139,12 @@ export default function CareerVault() {
                 {(statsOverview?.topWicketTaker?.wickets || 0) > 0 ? (
                   <View style={styles.legendContentHalf}>
                     <View style={[styles.legendInitialBoxSmall, { backgroundColor: theme.colors.success || '#2E7D32' }]}>
-                      <Text style={styles.legendInitialSmall}>{statsOverview.topWicketTaker.name[0]?.toUpperCase()}</Text>
+                      <Text style={styles.legendInitialSmall}>{statsOverview.topWicketTaker?.name?.[0]?.toUpperCase() ?? ''}</Text>
                     </View>
                     <View style={styles.legendTextContainer}>
-                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topWicketTaker.name || 'PLAYER').toUpperCase()}</Text>
-                      <Text style={styles.legendStatsSmall}>{statsOverview.topWicketTaker.wickets} WKTS</Text>
-                      <Text style={styles.legendMatchesSmall}>{statsOverview.topWicketTaker.matches} MATCHES</Text>
+                      <Text style={styles.legendNameSmall} numberOfLines={1}>{(statsOverview.topWicketTaker?.name || 'PLAYER').toUpperCase()}</Text>
+                      <Text style={styles.legendStatsSmall}>{statsOverview.topWicketTaker?.wickets ?? 0} WKTS</Text>
+                      <Text style={styles.legendMatchesSmall}>{statsOverview.topWicketTaker?.matches ?? 0} MATCHES</Text>
                     </View>
                   </View>
                 ) : (

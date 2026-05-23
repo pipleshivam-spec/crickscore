@@ -1014,101 +1014,111 @@ export default function Scoring() {
     };
 
     try {
+      // Compute the updated batsman/bowler states to sync to the server and local DB
+      const newBalls = score.balls + (c.countsAsBall ? 1 : 0);
+      const newWickets = score.wickets + (isWicket ? 1 : 0);
+      const isOverComplete = c.countsAsBall && newBalls > 0 && newBalls % 6 === 0;
+      const matchOvers = matchData?.overs || 20;
+      const inningsComplete = checkInningsEnd(newWickets, newBalls, matchOvers, score.runs + c.totalRuns, target) !== null;
+
+      let nStriker = { ...score.striker };
+      let nNonStriker = { ...score.nonStriker };
+      let nSStats = { ...score.strikerStats };
+      let nNSStats = { ...score.nonStrikerStats };
+      let nBStats = { ...score.bowlerStats };
+
+      // 1. Batsman stats
+      if (c.type !== 'wide') {
+        nSStats.runs += c.batsmanRuns;
+        if (c.countsAsBall) nSStats.balls += 1;
+        if (c.batsmanRuns === 4) nSStats.fours += 1;
+        if (c.batsmanRuns === 6) nSStats.sixes += 1;
+      }
+
+      // 2. Bowler stats
+      if (c.type !== 'bye' && c.type !== 'leg_bye') {
+        nBStats.runs += c.totalRuns;
+      }
+      if (c.countsAsBall) nBStats.balls += 1;
+      if (isWicket) nBStats.wickets += 1;
+
+      const runsConcededThisOver = score.runsConcededInCurrentOver + (c.type !== 'bye' && c.type !== 'leg_bye' ? c.totalRuns : 0);
+      if (isOverComplete && runsConcededThisOver === 0) {
+        nBStats.maidens += 1;
+      }
+
+      // 3. Strike rotation
+      if (!isWicket && c.strikeRotates) {
+        [nStriker, nNonStriker] = [nNonStriker, nStriker];
+        [nSStats, nNSStats] = [nNSStats, nSStats];
+      }
+
+      if (isOverComplete && !inningsComplete) {
+        [nStriker, nNonStriker] = [nNonStriker, nStriker];
+        [nSStats, nNSStats] = [nNSStats, nSStats];
+      }
+
+      // FOW & Dismissed
+      let nFow = [...score.fow];
+      let nDismissed = [...score.dismissed];
+      if (isWicket) {
+        const outPlayer = (score as any)._pendingWicketWhoOut === 'non-striker' ? score.nonStriker : score.striker;
+        const outStats = (score as any)._pendingWicketWhoOut === 'non-striker' ? score.nonStrikerStats : score.strikerStats;
+
+        nFow.push({
+          wicket: newWickets,
+          score: score.runs + c.totalRuns,
+          batter: outPlayer?.name || 'Batsman',
+          overs: `${Math.floor(newBalls / 6)}.${newBalls % 6}`
+        });
+        nDismissed = [{
+          ...outPlayer,
+          ...outStats,
+          how: (score as any)._pendingWicketType || 'OUT',
+          isStriker: false
+        }, ...nDismissed].slice(0, 3);
+      }
+
+      let nBowlers = [...score.bowlers];
+      const bIdx = nBowlers.findIndex(b => b.id === score.bowler?.id);
+      if (bIdx >= 0) {
+        nBowlers[bIdx] = nBStats;
+      } else if (score.bowler) {
+        nBowlers.push(nBStats);
+      }
+
       if (isOffline) {
         const updatedMatch = { ...matchData };
         const innIdx = updatedMatch.innings.findIndex((i: any) => i.id === inningsId);
         updatedMatch.innings[innIdx].balls = [...(updatedMatch.innings[innIdx].balls || []), newBallData];
-        updatedMatch.innings[innIdx].total_runs = (updatedMatch.innings[innIdx].total_runs || 0) + c.totalRuns;
-        updatedMatch.innings[innIdx].total_wickets = (updatedMatch.innings[innIdx].total_wickets || 0) + (isWicket ? 1 : 0);
-        if (c.countsAsBall) updatedMatch.innings[innIdx].total_balls = (updatedMatch.innings[innIdx].total_balls || 0) + 1;
-        // Persist for resume
-        updatedMatch.innings[innIdx].lastStriker = score.striker;
-        updatedMatch.innings[innIdx].lastNonStriker = score.nonStriker;
-        updatedMatch.innings[innIdx].lastStrikerStats = score.strikerStats;
-        updatedMatch.innings[innIdx].lastNonStrikerStats = score.nonStrikerStats;
-        updatedMatch.innings[innIdx].lastBowler = score.bowler;
-        updatedMatch.innings[innIdx].lastBowlerStats = score.bowlerStats;
-        updatedMatch.innings[innIdx].fow = score.fow;
-        updatedMatch.innings[innIdx].dismissed = score.dismissed;
-        updatedMatch.innings[innIdx].bowlers = score.bowlers;
-        updatedMatch.innings[innIdx].fullCommentary = score.fullCommentary;
+        updatedMatch.innings[innIdx].total_runs = score.runs + c.totalRuns;
+        updatedMatch.innings[innIdx].total_wickets = newWickets;
+        updatedMatch.innings[innIdx].total_balls = newBalls;
+        
+        // Persist for resume using newly computed states
+        updatedMatch.innings[innIdx].lastStriker = nStriker;
+        updatedMatch.innings[innIdx].lastNonStriker = nNonStriker;
+        updatedMatch.innings[innIdx].lastStrikerStats = nSStats;
+        updatedMatch.innings[innIdx].lastNonStrikerStats = nNSStats;
+        updatedMatch.innings[innIdx].lastBowler = nBStats;
+        updatedMatch.innings[innIdx].lastBowlerStats = nBStats;
+        updatedMatch.innings[innIdx].fow = nFow;
+        updatedMatch.innings[innIdx].dismissed = nDismissed;
+        updatedMatch.innings[innIdx].bowlers = nBowlers;
+        
+        const commText = generateBallCommentary({
+          runs: c.batsmanRuns,
+          extras: c.extrasRuns,
+          is_wicket: isWicket,
+          type: c.type,
+        }, score.striker.name);
+        const ov = `${Math.floor(score.balls / 6)}.${(score.balls % 6) + 1}`;
+        updatedMatch.innings[innIdx].fullCommentary = [{ over: ov, text: commText }, ...score.fullCommentary].slice(0, 20);
+
         await localDb.saveMatch(updatedMatch);
         setMatchData(updatedMatch);
       } else {
         await supabase.from('balls').insert([newBallData]);
-
-        // Compute the updated batsman/bowler states to sync to the server
-        const newBalls = score.balls + (c.countsAsBall ? 1 : 0);
-        const newWickets = score.wickets + (isWicket ? 1 : 0);
-        const isOverComplete = c.countsAsBall && newBalls > 0 && newBalls % 6 === 0;
-        const matchOvers = matchData?.overs || 20;
-        const inningsComplete = checkInningsEnd(newWickets, newBalls, matchOvers, score.runs + c.totalRuns, target) !== null;
-
-        let nStriker = { ...score.striker };
-        let nNonStriker = { ...score.nonStriker };
-        let nSStats = { ...score.strikerStats };
-        let nNSStats = { ...score.nonStrikerStats };
-        let nBStats = { ...score.bowlerStats };
-
-        // 1. Batsman stats
-        if (c.type !== 'wide') {
-          nSStats.runs += c.batsmanRuns;
-          if (c.countsAsBall) nSStats.balls += 1;
-          if (c.batsmanRuns === 4) nSStats.fours += 1;
-          if (c.batsmanRuns === 6) nSStats.sixes += 1;
-        }
-
-        // 2. Bowler stats
-        if (c.type !== 'bye' && c.type !== 'leg_bye') {
-          nBStats.runs += c.totalRuns;
-        }
-        if (c.countsAsBall) nBStats.balls += 1;
-        if (isWicket) nBStats.wickets += 1;
-
-        const runsConcededThisOver = score.runsConcededInCurrentOver + (c.type !== 'bye' && c.type !== 'leg_bye' ? c.totalRuns : 0);
-        if (isOverComplete && runsConcededThisOver === 0) {
-          nBStats.maidens += 1;
-        }
-
-        // 3. Strike rotation
-        if (!isWicket && c.strikeRotates) {
-          [nStriker, nNonStriker] = [nNonStriker, nStriker];
-          [nSStats, nNSStats] = [nNSStats, nSStats];
-        }
-
-        if (isOverComplete && !inningsComplete) {
-          [nStriker, nNonStriker] = [nNonStriker, nStriker];
-          [nSStats, nNSStats] = [nNSStats, nSStats];
-        }
-
-        // FOW & Dismissed
-        let nFow = [...score.fow];
-        let nDismissed = [...score.dismissed];
-        if (isWicket) {
-          const outPlayer = (score as any)._pendingWicketWhoOut === 'non-striker' ? score.nonStriker : score.striker;
-          const outStats = (score as any)._pendingWicketWhoOut === 'non-striker' ? score.nonStrikerStats : score.strikerStats;
-
-          nFow.push({
-            wicket: newWickets,
-            score: score.runs + c.totalRuns,
-            batter: outPlayer?.name || 'Batsman',
-            overs: `${Math.floor(newBalls / 6)}.${newBalls % 6}`
-          });
-          nDismissed = [{
-            ...outPlayer,
-            ...outStats,
-            how: (score as any)._pendingWicketType || 'OUT',
-            isStriker: false
-          }, ...nDismissed].slice(0, 3);
-        }
-
-        let nBowlers = [...score.bowlers];
-        const bIdx = nBowlers.findIndex(b => b.id === score.bowler?.id);
-        if (bIdx >= 0) {
-          nBowlers[bIdx] = nBStats;
-        } else if (score.bowler) {
-          nBowlers.push(nBStats);
-        }
 
         await supabase.from('innings').update({
           total_runs: score.runs + c.totalRuns,
